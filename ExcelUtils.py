@@ -846,6 +846,15 @@ class ExcelUtils:
     ENGINE_LIST = ["openpyxl", "xlutils", "xlwings"]
 
     def __init__(self, excel_path: str, sheet_name: str = "Sheet1", engine: str = None, encoding: str = "utf-8", visible=False):
+        """初始化excel操作类
+
+        Args:
+            excel_path (str): excel路径
+            sheet_name (str, optional): sheet名. Defaults to "Sheet1".
+            engine (str, optional): 引擎名, 可以为 openpyxl|xlutils|xlwings. Defaults to None.
+            encoding (str, optional): 编码. Defaults to "utf-8".
+            visible (bool, optional): 是否以可视化形式打开(只使用xlwings引擎有效). Defaults to False.
+        """
         path = Path(excel_path)
         excel_path = str(path.resolve())
         """engine若为空, 则使用默认引擎"""
