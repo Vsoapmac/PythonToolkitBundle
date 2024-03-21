@@ -1,9 +1,10 @@
 import warnings
 import xlwings as xw
 from pathlib import Path
-from openpyxl import load_workbook
 from xlrd import open_workbook
 from xlutils.copy import copy
+from openpyxl import load_workbook
+from openpyxl.styles import Alignment, Font, PatternFill, Border, Side
 
 
 def get_column_letter(column_index: int) -> str:
@@ -256,7 +257,6 @@ class OpenpyxlAdapter:
             color_code (str, optional): 16进制颜色码. Defaults to None.
             auto_save (bool, optional): 自动保存开关. Defaults to True.
         """
-        from openpyxl.styles import Font
         color_code = color_code.replace("#", "")
         font = Font(name=name, size=size, bold=bold, italic=italic, color=color_code)
         self.sheet.cell(row=row, column=get_column_index(column)).font = font
@@ -285,7 +285,6 @@ class OpenpyxlAdapter:
             fill_type (str, optional): 填充类型. Defaults to solid.
             auto_save (bool, optional): 自动保存开关. Defaults to True.
         """
-        from openpyxl.styles import PatternFill
         color_code = color_code.replace("#", "")
         fill = PatternFill(start_color=color_code, end_color=color_code, fill_type=fill_type)
         self.sheet.cell(row=row, column=get_column_index(column)).fill = fill
@@ -314,7 +313,6 @@ class OpenpyxlAdapter:
             border_style (str, optional): 边框类型. Defaults to "thin".
             auto_save (bool, optional): 自动保存开关. Defaults to True.
         """
-        from openpyxl.styles import Border, Side
         color_code = color_code.replace("#", "")
         border = Border(left=Side(border_style=border_style, color=color_code),
                 right=Side(border_style=border_style, color=color_code),
@@ -347,7 +345,6 @@ class OpenpyxlAdapter:
             wrap_text (bool, optional): 超过文本框后自动换行. Defaults to True.
             auto_save (bool, optional): 自动保存开关. Defaults to True.
         """
-        from openpyxl.styles import Alignment
         alignment = Alignment(horizontal=horizontal, vertical=vertical, wrap_text=wrap_text)
         self.sheet.cell(row=row, column=get_column_index(column)).alignment = alignment
         if auto_save:
@@ -851,7 +848,7 @@ class ExcelUtils:
         Args:
             excel_path (str): excel路径
             sheet_name (str, optional): sheet名. Defaults to "Sheet1".
-            engine (str, optional): 引擎名, 可以为 openpyxl|xlutils|xlwings. Defaults to None.
+            engine (str, optional): 引擎名, 可以为 openpyxl|xlutils|xlwings, 若为None则自动选择引擎. Defaults to None.
             encoding (str, optional): 编码. Defaults to "utf-8".
             visible (bool, optional): 是否以可视化形式打开(只使用xlwings引擎有效). Defaults to False.
         """
