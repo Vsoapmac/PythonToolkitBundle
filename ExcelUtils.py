@@ -520,7 +520,7 @@ class XlutilsAdapter:
 
 class XlwingsAdapter:
 
-    def __init__(self, app, book, sheet, excel_path, sheet_name, column_list):
+    def __init__(self, app, book, sheet, excel_path, sheet_name):
         self.app = app
         self.book = book
         self.sheet = sheet
@@ -842,7 +842,7 @@ class ExcelUtils:
     DEFAULT_ENGINE_DICT = {".xlsx": "openpyxl", ".xls": "xlwings"}
     ENGINE_LIST = ["openpyxl", "xlutils", "xlwings"]
 
-    def __init__(self, excel_path: str, sheet_name: str = "Sheet1", engine: str = None, encoding: str = "utf-8", visible=False):
+    def __init__(self, excel_path: str, sheet_name: str="Sheet1", engine: str=None, encoding: str="utf-8", visible=False):
         """初始化excel操作类
 
         Args:
