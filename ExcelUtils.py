@@ -529,9 +529,9 @@ class XlwingsAdapter:
             
     def close(self):
         """关闭引擎"""
-        self.app.quit()
         self.book.save()
         self.book.close()
+        self.app.quit()
         self.book = None
         self.sheet = None
         self.excel_path = None
