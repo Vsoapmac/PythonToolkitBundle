@@ -5,13 +5,18 @@ from airtest.core.android.android import Android
 
 class AirtestAdapter:
     d = None
+    UUID = None
     
     def globel_device(self, device: Android):
         self.d = device
     
     def connect_device(self, UUID: str) -> Android:
+        self.UUID = UUID
         return init_device(uuid=UUID)
 
+    def get_window_size(self) -> tuple:
+        return self.d.get_current_resolution()
+    
     def install_app(self, app_file_path: str):
         self.d.install_app(app_file_path)
 
@@ -36,7 +41,13 @@ class AirtestAdapter:
             Template: 图片Template抽象类
         """
         return Template(img_file_path, threshold, target_pos, record_pos, resolution)
+    
+    def wait(self, template: Template, timeout: int=60, interval: float=0.5):
+        wait(template, timeout, interval)
         
+    def exists(self, template: Template) -> bool:
+        return exists(template) if exists(template) == False else True
+    
     def touch(self, template: Template, timeout: int=60, interval: float=0.5):
         """点击元素
 
@@ -48,16 +59,48 @@ class AirtestAdapter:
         wait(template, timeout, interval)
         touch(template)
 
-
+    def touch_pos(self, x: int|float, y: int|float):
+        touch((x, y))
+        
+    def long_touch(self, template: Template, duration: float=0.5, timeout: int=60, interval: float=0.5):
+        wait(template, timeout, interval)
+        touch(template, duration=duration)
+    
+    def shell(self, command: str) -> str:
+        return self.d.shell(command)
+    
+    def enable_wifi(self) -> str:
+        return self.d.shell("svc wifi enable")
+    
+    def disable_wifi(self) -> str:
+        return self.d.shell("svc wifi disable")
+    
+    def enable_data(self) -> str:
+        return self.d.shell("svc data enable")
+    
+    def disable_data(self) -> str:
+        return self.d.shell("svc data disable")
+    
+    def send_remote_file(self, from_file_path: str, to_file_path: str):
+        os.system(f"adb -s {self.UUID} push {from_file_path} {to_file_path}")
+    
+    def get_remote_file(self, from_file_path: str, to_file_path: str):
+        os.system(f"adb -s {self.UUID} pull {from_file_path} {to_file_path}")
+    
 class Ui2Adapter:
     d = None
+    UUID = None
     
     def globel_device(self, device: u2.Device):
         self.d = device
     
     def connect_device(self, UUID: str) -> u2.Device:
+        self.UUID = UUID
         return u2.connect(UUID)
 
+    def get_window_size(self) -> tuple:
+        return self.d.window_size()
+    
     def install_app(self, app_file_path: str):
         self.d.install_app(app_file_path)
 
@@ -67,7 +110,62 @@ class Ui2Adapter:
     def stop_app(self, app_package: str):
         self.d.stop_app(app_package)
 
+    def find_element(self, timeout: int=60, **UiSelector) -> u2.UiObject:
+        self.d(**UiSelector).wait(timeout=timeout)
+        return self.d(**UiSelector)
+    
+    def wait(self, timeout: int=60, **UiSelector):
+        self.d(**UiSelector).wait(timeout=timeout)
+        
+    def wait_gone(self, timeout: int=60, **UiSelector):
+        self.d(**UiSelector).wait(False, timeout)
+    
+    def exists(self, timeout: int=60, **UiSelector) -> bool:
+        return False if self.d(**UiSelector).exists(timeout) == None else True
+    
+    def click(self, timeout: int=60, **UiSelector):
+        self.d(**UiSelector).click(timeout)
+    
+    def click_pos(self, x: int|float, y: int|float):
+        """坐标点击
 
+        Args:
+            x (int | float): x
+            y (int | float): y
+        """
+        self.d.click(x, y)
+    
+    def long_click(self, duration: float=0.5, timeout: int=60, **UiSelector):
+        """长按
+
+        Args:
+            duration (float, optional): 按住多少秒. Defaults to 0.5.
+            timeout (int, optional): 等待超时时间. Defaults to 60.
+        """
+        self.d(**UiSelector).long_click(duration, timeout)
+        
+    def shell(self, command: str|list[str], stream: bool=False, timeout: int=60) -> str:
+        return self.d.shell(command, stream, timeout)
+    
+    def enable_wifi(self, stream: bool=False, timeout: int=60) -> str:
+        return self.d.shell("svc wifi enable", stream, timeout)
+    
+    def disable_wifi(self, stream: bool=False, timeout: int=60) -> str:
+        return self.d.shell("svc wifi disable", stream, timeout)
+    
+    def enable_data(self, stream: bool=False, timeout: int=60) -> str:
+        return self.d.shell("svc data enable", stream, timeout)
+    
+    def disable_data(self, stream: bool=False, timeout: int=60) -> str:
+        return self.d.shell("svc data disable", stream, timeout)
+    
+    def send_remote_file(self, from_file_path: str, to_file_path: str):
+        os.system(f"adb -s {self.UUID} push {from_file_path} {to_file_path}")
+    
+    def get_remote_file(self, from_file_path: str, to_file_path: str):
+        os.system(f"adb -s {self.UUID} pull {from_file_path} {to_file_path}")
+    
+    
 class AndroidToolKit:
     DEFAULT_ENGINE = "uiautomator2"
     ENGINE_LIST = ["uiautomator2", "airtest"]
@@ -77,11 +175,11 @@ class AndroidToolKit:
         if engine is None:
             engine = self.DEFAULT_ENGINE
         if engine == "uiautomator2":
-            self.engine_ada = Ui2Adapter()
-            self.device = self.engine_ada.connect_device(UUID)
-            self.engine_ada.globel_device(device=self.device)
+            self.engine = Ui2Adapter()
+            self.device = self.engine.connect_device(UUID)
+            self.engine.globel_device(device=self.device)
         elif engine == "airtest":
-            self.engine_ada = AirtestAdapter()
-            self.device = self.engine_ada.connect_device(UUID)
-            self.engine_ada.globel_device(self.device)
+            self.engine = AirtestAdapter()
+            self.device = self.engine.connect_device(UUID)
+            self.engine.globel_device(self.device)
             
