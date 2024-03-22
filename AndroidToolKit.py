@@ -45,8 +45,15 @@ class AirtestAdapter:
     def wait(self, template: Template, timeout: int=60, interval: float=0.5):
         wait(template, timeout, interval)
         
-    def exists(self, template: Template) -> bool:
-        return exists(template) if exists(template) == False else True
+    def get_element_position(self, template: Template, timeout: int=60, interval: float=0.5) -> tuple:
+        return wait(template, timeout, interval)
+        
+    def exists(self, template: Template, timeout: int=3, interval: float=0.5) -> bool:
+        try:
+            wait(template, timeout, interval)
+            return True
+        except:
+            return False
     
     def touch(self, template: Template, timeout: int=60, interval: float=0.5):
         """点击元素
@@ -86,7 +93,8 @@ class AirtestAdapter:
     
     def get_remote_file(self, from_file_path: str, to_file_path: str):
         os.system(f"adb -s {self.UUID} pull {from_file_path} {to_file_path}")
-    
+
+
 class Ui2Adapter:
     d = None
     UUID = None
@@ -102,17 +110,24 @@ class Ui2Adapter:
         return self.d.window_size()
     
     def install_app(self, app_file_path: str):
-        self.d.install_app(app_file_path)
+        self.d.app_install(app_file_path)
 
     def start_app(self, app_package: str):
-        self.d.start_app(app_package)
+        self.d.app_start(app_package)
         
     def stop_app(self, app_package: str):
-        self.d.stop_app(app_package)
+        self.d.app_stop(app_package)
 
     def find_element(self, timeout: int=60, **UiSelector) -> u2.UiObject:
         self.d(**UiSelector).wait(timeout=timeout)
         return self.d(**UiSelector)
+    
+    def get_element_info(self, timeout: int=60, **UiSelector) -> dict:
+        self.d(**UiSelector).wait(timeout=timeout)
+        return self.d(**UiSelector).info
+    
+    def get_element_position(self, timeout: int=60, **UiSelector) -> tuple:
+        return self.d(**UiSelector).wait(timeout=timeout)
     
     def wait(self, timeout: int=60, **UiSelector):
         self.d(**UiSelector).wait(timeout=timeout)
@@ -120,7 +135,7 @@ class Ui2Adapter:
     def wait_gone(self, timeout: int=60, **UiSelector):
         self.d(**UiSelector).wait(False, timeout)
     
-    def exists(self, timeout: int=60, **UiSelector) -> bool:
+    def exists(self, timeout: int=3, **UiSelector) -> bool:
         return False if self.d(**UiSelector).exists(timeout) == None else True
     
     def click(self, timeout: int=60, **UiSelector):
@@ -144,6 +159,12 @@ class Ui2Adapter:
         """
         self.d(**UiSelector).long_click(duration, timeout)
         
+    def swipe(self, direction: str="up", scale: float=0.5, position_box: tuple[float]=None):
+        if position_box:
+            self.d.swipe(position_box[0], position_box[1], position_box[2], position_box[3])
+        else:
+            self.d.swipe_ext(direction, scale)
+        
     def shell(self, command: str|list[str], stream: bool=False, timeout: int=60) -> str:
         return self.d.shell(command, stream, timeout)
     
@@ -164,8 +185,8 @@ class Ui2Adapter:
     
     def get_remote_file(self, from_file_path: str, to_file_path: str):
         os.system(f"adb -s {self.UUID} pull {from_file_path} {to_file_path}")
-    
-    
+
+
 class AndroidToolKit:
     DEFAULT_ENGINE = "uiautomator2"
     ENGINE_LIST = ["uiautomator2", "airtest"]
