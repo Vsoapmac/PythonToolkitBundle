@@ -73,6 +73,15 @@ class AirtestAdapter:
         wait(template, timeout, interval)
         touch(template, duration=duration)
     
+    def send_text(self, text: str, enter: bool=False, search: bool=True):
+        text(text, enter=enter, search=search)
+        
+    def press(self, key: int|str):
+        keyevent(key)
+    
+    def screenshot(self, file_path: str, quality: int=None, max_size: int=None):
+        snapshot(file_path, quality=quality, max_size=max_size)
+    
     def shell(self, command: str) -> str:
         return self.d.shell(command)
     
@@ -108,6 +117,12 @@ class Ui2Adapter:
 
     def get_window_size(self) -> tuple:
         return self.d.window_size()
+    
+    def set_fastinput_ime(self, enable: bool=True):
+        self.d.set_fastinput_ime(enable=enable)
+    
+    def check_current_ime(self) -> tuple:
+        return self.d.current_ime()
     
     def install_app(self, app_file_path: str):
         self.d.app_install(app_file_path)
@@ -158,13 +173,43 @@ class Ui2Adapter:
             timeout (int, optional): 等待超时时间. Defaults to 60.
         """
         self.d(**UiSelector).long_click(duration, timeout)
-        
+    
+    def get_text(self, **UiSelector) -> str:
+        return self.d(**UiSelector).get_text()
+    
+    def send_text(self, text: str, **UiSelector):
+        self.d(**UiSelector).set_text(text)
+    
+    def send_keys(self, text: str, clear: bool=False, **UiSelector):
+        self.d.send_keys(text, clear, **UiSelector)
+    
+    def press(self, key: int|str):
+        self.d.press(key)
+    
     def swipe(self, direction: str="up", scale: float=0.5, position_box: tuple[float]=None):
         if position_box:
             self.d.swipe(position_box[0], position_box[1], position_box[2], position_box[3])
         else:
             self.d.swipe_ext(direction, scale)
         
+    def drag(self, sx: float, sy: float, ex: float, ey: float, duration: float=0.5):
+        self.d.drag(sx, sy, ex, ey, duration=duration)
+    
+    def screenshot(self, file_path: str):
+        self.d.screenshot(file_path)
+        
+    def start_record(self, file_path: str):
+        """开始录屏, 若使用请执行如下命令安装如下库:
+        \npip install -U "uiautomator2[image]" -i https://pypi.doubanio.com/simple
+
+        Args:
+            file_path (str): 录制视频保存路径
+        """
+        self.d.screenrecord(file_path)
+    
+    def stop_record(self):
+        self.d.screenrecord.stop()
+    
     def shell(self, command: str|list[str], stream: bool=False, timeout: int=60) -> str:
         return self.d.shell(command, stream, timeout)
     
