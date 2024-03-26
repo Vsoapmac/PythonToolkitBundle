@@ -140,9 +140,9 @@ class AirtestAdapter:
 
         Args:
             template (Template): 图片Template抽象类
-            duration (float, optional): _description_. Defaults to 0.5.
+            duration (float, optional): 长按时间. Defaults to 0.5.
             timeout (int, optional): 等待超时时间. Defaults to 60.
-            interval (float, optional): _description_. Defaults to 0.5.
+            interval (float, optional): 识别间隔, 每隔几秒识别一次. Defaults to 0.5.
         """
         wait(template, timeout, interval)
         touch(template, duration=duration)
@@ -395,17 +395,22 @@ class Ui2Adapter:
         self.d(**UiSelector).wait(False, timeout)
     
     def exists(self, timeout: int=3, **UiSelector) -> bool:
-        """判断元素是否
+        """判断元素是否存在
 
         Args:
-            timeout (int, optional): _description_. Defaults to 3.
+            timeout (int, optional): 超时时间. Defaults to 3.
 
         Returns:
-            bool: _description_
+            bool: 是否存在
         """
         return False if self.d(**UiSelector).exists(timeout) == None else True
     
     def click(self, timeout: int=60, **UiSelector):
+        """点击
+
+        Args:
+            timeout (int, optional): 超时时间. Defaults to 60.
+        """
         self.d(**UiSelector).click(timeout)
     
     def click_pos(self, x: int|float, y: int|float):
