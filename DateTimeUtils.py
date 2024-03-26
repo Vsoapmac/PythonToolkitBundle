@@ -76,9 +76,9 @@ def caculate(start: float, end: float, round_index=3, type="s") -> float:
         时间差
 
     Examples:
-        >>> start = DateTimeUtils.recordTime()
+        >>> start = DateTimeUtils.record()
         >>> print("test")
-        >>> end = DateTimeUtils.recordTime()
+        >>> end = DateTimeUtils.record()
         >>> result = DateTimeUtils.caculate(start, end)
         >>> result = DateTimeUtils.caculate(start, end, type='min')
     """
@@ -92,7 +92,7 @@ def caculate(start: float, end: float, round_index=3, type="s") -> float:
     else:
         raise ValueError(f"类型无法识别, 不能为{type}")
 
-def caculateTimes(start: str, end: str, pattern: str = "%H:%M:%S", return_mode="s", ndigits_number=1) -> float:
+def caculate_times(start: str, end: str, pattern: str = "%H:%M:%S", return_mode="s", ndigits_number=1) -> float:
     """计算时间差
 
     Args:
@@ -142,7 +142,7 @@ def caculate_timer(func):
 
     return func_wrapper
 
-def splitTimes(time: str, pattern: str) -> dict:
+def split_times(time: str, pattern: str) -> dict:
     """分割时间字符串
 
     Args:
@@ -171,7 +171,7 @@ def splitTimes(time: str, pattern: str) -> dict:
         "microsecond": time_split.microsecond,
     }
 
-def getDayByCaculate(time: str, days=-1, pattern: str = "%Y-%m-%d") -> str:
+def get_day_by_caculate(time: str, days=-1, pattern: str = "%Y-%m-%d") -> str:
     """计算参数时间为基准的时间
 
     Args:
@@ -183,16 +183,18 @@ def getDayByCaculate(time: str, days=-1, pattern: str = "%Y-%m-%d") -> str:
         计算后时间, 格式以pattern为基准
 
     Examples:
-        >>> caculate = DateTimeUtils.getDayByCaculate("2023-05-11")
+        >>> caculate = DateTimeUtils.get_day_by_caculate("2023-05-11")
         2023-05-10
-        >>> caculate = DateTimeUtils.getDayByCaculate("2023-04-12", days=1)
+        >>> caculate = DateTimeUtils.get_day_by_caculate("2023-04-12", days=1)
         2023-04-13
+        >>> caculate = DateTimeUtils.get_day_by_caculate("2023-04-12", days=-366) # 获取一年前的日期
+        2022-04-13
     """
     base_time = datetime.strptime(time, pattern)
     caculate = base_time + timedelta(days=days)
     return caculate.strftime(pattern)
 
-def getDay(days=0, pattern: str = "%Y-%m-%d", transfer_to_str=True) -> str | datetime:
+def get_day(days=0, pattern: str = "%Y-%m-%d", transfer_to_str=True) -> str | datetime:
     """获取某日期
 
     Args:
@@ -203,9 +205,9 @@ def getDay(days=0, pattern: str = "%Y-%m-%d", transfer_to_str=True) -> str | dat
         日期, 格式以pattern为基准
 
     Examples:
-        >>> DateTimeUtils.getDay() # 假设今天是2023-05-11
+        >>> DateTimeUtils.get_day() # 假设今天是2023-05-11
         2023-05-11
-        >>> DateTimeUtils.getDay(-1)
+        >>> DateTimeUtils.get_day(-1)
         2023-05-10
     """
     now = datetime.now()
@@ -215,7 +217,7 @@ def getDay(days=0, pattern: str = "%Y-%m-%d", transfer_to_str=True) -> str | dat
     else:
         return day
 
-def getMonthEndDay(month: int, pattern: str = "%Y-%m-%d") -> str:
+def get_month_end_day(month: int, pattern: str = "%Y-%m-%d") -> str:
     """获取某月月底
 
     Args:
@@ -227,15 +229,15 @@ def getMonthEndDay(month: int, pattern: str = "%Y-%m-%d") -> str:
     """
     if month < 1 or month > 12:
         raise Exception(f"输入参数不正确, 日期中没有{month}月")
-    next_month = month + 1 if month != 12 else 1 
-    next_month_start_day = getDay(pattern=f"%Y-0{next_month}-01") if next_month < 10 else getDay(pattern=f"%Y-{next_month}-01")  # 找到这个月的下一个月月初, 以此减一从而获取这个月月底
-    month_end_day = getDayByCaculate(next_month_start_day)
+    next_month = month + 1 if month != 12 else 1
+    next_month_start_day = get_day(pattern=f"%Y-0{next_month}-01") if next_month < 10 else get_day(pattern=f"%Y-{next_month}-01")  # 找到这个月的下一个月月初, 以此减一从而获取这个月月底
+    month_end_day = get_day_by_caculate(next_month_start_day)
     if pattern == "%Y-%m-%d":
         return month_end_day
     else:
-        return changePattern(month_end_day, "%Y-%m-%d", pattern)
+        return change_pattern(month_end_day, "%Y-%m-%d", pattern)
 
-def changePattern(time: str, re_pattern: str, pattern: str) -> str:
+def change_pattern(time: str, re_pattern: str, pattern: str) -> str:
     """修改时间格式
 
     Args:
@@ -247,12 +249,12 @@ def changePattern(time: str, re_pattern: str, pattern: str) -> str:
         修改格式后的时间
 
     Examples:
-        >>> DateTimeUtils.changePattern("2023-05-11", "%Y-%m-%d","%Y%m%d") # 修改时间格式为yyyymmdd
+        >>> DateTimeUtils.change_pattern("2023-05-11", "%Y-%m-%d","%Y%m%d") # 修改时间格式为yyyymmdd
         20230510
     """
     return datetime.strptime(time, re_pattern).strftime(pattern)
 
-def checkPattern(time: str, pattern: str) -> bool:
+def check_pattern(time: str, pattern: str) -> bool:
     """检查是否时间字符串是否为对应的匹配格式
 
     Args:
@@ -263,9 +265,9 @@ def checkPattern(time: str, pattern: str) -> bool:
         True或False
 
     Examples:
-        >>> DateTimeUtils.checkPattern("2023-09-06", "%Y%m%d")
+        >>> DateTimeUtils.check_pattern("2023-09-06", "%Y%m%d")
         False
-        >>> DateTimeUtils.checkPattern("2023-09-06", "%Y-%m-%d")
+        >>> DateTimeUtils.check_pattern("2023-09-06", "%Y-%m-%d")
         True
     """
     try:
