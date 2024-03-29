@@ -8,52 +8,74 @@ from concurrent.futures import ThreadPoolExecutor
 def load_str_as_pathlib(*path_str: str | Path) -> Path:
     """将字符串的path转换成pathlib的对象
 
-    Args:
-        *path_str: 字符串的path, 可传入多个参数
-
     Returns:
-        对应path的patblib对象
-
+        Path: 对应path的patblib对象
+    
     Examples:
         >>> FilePathUtils.load_str_as_pathlib("D:/test", "test01", "test001", "test.exe")
         D:\\test\\test01\\test001\\test.exe
     """
     return Path(*path_str)
 
-def path_joint_str(original_path: str | Path, *path_str: str | Path, to_Path=False) -> str | Path:
+def path_joint_str(original_path: str | Path, *path_str: str | Path, to_Path: bool=False, is_resolve: bool=True) -> str | Path:
     """将路径拼接上原始的路径
 
     Args:
-        original_path: 原始路径的Path
-        *path_str: 字符串的path, 可传入多个参数
-        to_Path: 结果是否转化为pathlib对象, 默认False
+        original_path (str | Path): 原始路径的Path
+        to_Path (bool, optional): 结果是否转化为pathlib对象. Defaults to False.
+        is_resolve (bool, optional): 是否返回绝对路径. Defaults to True.
 
     Returns:
-        拼接完成后的路径
-
-    Examples:
-        >>> FilePathUtils.path_joint_str("D:/assassin", "test", "test01", "test001", "test.exe")
-        D:\\assassin\\test\\test01\\test001\\test.exe
+        str | Path: 拼接结果
     """
     original_path = Path(original_path, *path_str)
     if not to_Path:
-        return str(original_path.resolve())
+        return str(original_path.resolve()) if is_resolve else str(original_path)
     else:
         return original_path
+
+def get_parent(path: str, to_Path: bool=False, is_resolve: bool=True) -> str | Path:
+    """获取父路径
+
+    Args:
+        path (str): 文件路径
+        to_Path (bool, optional): 结果是否转化为pathlib对象. Defaults to False.
+        is_resolve (bool, optional): 是否返回绝对路径. Defaults to True.
+
+    Returns:
+        str | Path: 父路径
+    """
+    return Path(path).parent.resolve() if is_resolve else Path(path).parent if to_Path else str(Path(path).parent.resolve()) if is_resolve else str(Path(path).parent)
+
+def get_parents(path: str, is_resolve: bool=True) -> list[str]:
+    """获取父路径列表
+
+    Args:
+        path (str): 文件路径
+        is_resolve (bool, optional): 是否返回绝对路径. Defaults to True.
+
+    Returns:
+        list[str]: 父路径列表
+        
+    Examples:
+        >>> FilePathUtils.get_parents("D:/test/test01/test001/test.exe")
+        ['D:\\test\\test01\\test001', 'D:\\test\\test01', 'D:\\test', 'D:\\']
+    """
+    return [str(parent) for parent in Path(path).resolve().parents] if is_resolve else [str(parent) for parent in Path(path).parents]
 
 def get_project_folder_path(project_name: str = '', file_level: int = -1) -> Path:
     """获取项目绝对路径
 
     Args:
-        project_name: 项目名称
-        file_level: 文件在当前项目的哪一层, 在当前文件夹下为0, 在项目子文件夹下为1, 在项目子文件夹下的子文件夹为2, 以此类推。
-        当file_level > 0时, 形参project_name就不会起作用了, 只有file_level=-1时才会起作用。默认为-1
-
-    Returns:
-        项目绝对路径
+        project_name (str, optional): 项目名称. Defaults to ''.
+        file_level (int, optional): 文件在当前项目的哪一层, 在当前文件夹下为0, 在项目子文件夹下为1, 在项目子文件夹下的子文件夹为2, 以此类推。
+        当file_level > 0时, 形参project_name就不会起作用了, 只有file_level=-1时才会起作用。默认为-1. Defaults to -1.
 
     Raises:
         Exception: 路径不存在则抛出异常
+
+    Returns:
+        Path: 项目绝对路径
     """
     cwd = Path.cwd()
     if file_level == -1:
@@ -75,23 +97,23 @@ def get_file_modify_day(file_path: str | Path, time_format="%Y%m%d") -> str:
     """查看文件修改日期
 
     Args:
-        file_path: 文件路径, 如 D:\\test.txt
-        time_format: 日期格式, 默认%Y%m%d, 也就是年月日
+        file_path (str | Path): 文件路径, 如 D:\\test.txt
+        time_format (str, optional): 日期格式. Defaults to "%Y%m%d".
 
     Returns:
-        文件修改日期
+        str: 文件修改日期
     """
     mtime = os.path.getmtime(file_path)
     return datetime.fromtimestamp(mtime).strftime(time_format)
 
 def get_file_md5(file_path: str) -> str:
     """查看文件md5
-    
+
     Args:
-        file_path: 文件路径, 如 D:\\test.txt
+        file_path (str): 文件路径, 如 D:\\test.txt
 
     Returns:
-        文件的md5
+        str: 文件的md5
     """
     with open(file_path, 'rb') as f:
         data = f.read()
@@ -104,12 +126,12 @@ def get_file_info(file_path: str | Path, beatiful_print=False) -> dict:
     """获取文件完整信息
 
     Args:
-        file_path: 文件路径
-        beatiful_print: 是否格式化打印出来, 默认False
+        file_path (str | Path): 文件路径
+        beatiful_print (bool, optional): 是否格式化打印出来. Defaults to False.
 
     Returns:
-        装有文件详细信息的字典
-        返回值参数说明：
+        dict: 文件详细信息
+        返回值参数说明: 
         - "full_name"：文件完整名(包含后缀)
         - "name"：文件名(不包含后缀)
         - "suffix"：文件后缀(.xx格式)
@@ -146,10 +168,10 @@ def listdir(folder_path: str | Path) -> list:
     """将文件夹下的文件以列表的形式返回
 
     Args:
-        folder_path: 文件夹路径
+        folder_path (str | Path): 文件夹路径
 
     Returns:
-        文件夹下的文件(包含文件夹与文件)的列表
+        list: 文件夹下的文件(包含文件夹与文件)的列表
     """
     return os.listdir(folder_path)
 
@@ -157,10 +179,10 @@ def count_folder_files(folder_path: str | Path) -> int:
     """计算文件夹下面所有的文件(不包含子文件夹)
 
     Args:
-        folder_path: 文件夹路径
+        folder_path (str | Path): 文件夹路径
 
     Returns:
-        文件夹下的文件数量
+        int: 文件夹下的文件数量
     """
     for root, dirs, files in os.walk(folder_path):
         return len(files)
@@ -169,10 +191,10 @@ def count_all_folder_files(folder_path: str | Path) -> int:
     """计算文件夹下面所有的文件(包含子文件夹)
 
     Args:
-        folder_path: 文件夹路径
+        folder_path (str | Path): 文件夹路径
 
     Returns:
-        文件夹下的文件数量
+        int: 文件夹下的文件数量
     """
     count = 0
     for root, dirs, files in os.walk(folder_path):
@@ -180,10 +202,10 @@ def count_all_folder_files(folder_path: str | Path) -> int:
     return count
 
 def create_folder(folder_path: str | Path):
-    """创建文件夹
+    """创建文件夹, 会自动判断是否存在该文件夹, 如果存在则不创建, 如果不存在则创建该文件夹, 如果文件夹路径不存在则自动创建路径
 
     Args:
-        folder_path: 文件夹路径
+        folder_path (str | Path): 文件夹路径
     """
     path = Path(folder_path)
     if not path.exists():
@@ -194,14 +216,14 @@ def read_file(file_path: str | Path, encoding="UTF-8") -> str:
     """读取文件
 
     Args:
-        file_path: 文件路径
-        encoding: 文件编码
-
-    Returns:
-        文件内容
+        file_path (str | Path): 文件路径
+        encoding (str, optional): 文件编码. Defaults to "UTF-8".
 
     Raises:
         Exception: 文件不存在或不可读则抛出异常
+
+    Returns:
+        str: 文件内容
     """
     path = Path(file_path)
     if path.exists():
@@ -215,9 +237,9 @@ def write_file(file_path: str | Path, content, encoding="UTF-8"):
     """写入文件, 文件不存在则自动创建
 
     Args:
-        file_path: 文件路径
-        content: 写入的内容
-        encoding: 文件编码, 默认UTF-8
+        file_path (str | Path): 文件路径
+        content (_type_): 写入的内容
+        encoding (str, optional): 文件编码. Defaults to "UTF-8".
 
     Raises:
         Exception: 文件不可写则抛出异常
@@ -233,11 +255,11 @@ def rename_file(old_file_path: str | Path, new_file_name: str) -> Path:
     """重命名文件或文件夹
 
     Args:
-        old_file_path: 源文件路径
-        new_file_name: 新文件名
+        old_file_path (str | Path): 源文件路径
+        new_file_name (str): 新文件名
 
     Returns:
-        新的文件名绝对路径
+        Path: 新的文件名绝对路径
     """
     old_file_path = Path(old_file_path).resolve()
     path = old_file_path.parent
@@ -247,8 +269,8 @@ def copy_single_file(from_file_path: str | Path, to_file_folder: str | Path):
     """复制单个文件到指定路径
 
     Args:
-        from_file_path: 源文件路径
-        to_file_folder: 目标文件夹路径
+        from_file_path (str | Path): 源文件路径
+        to_file_folder (str | Path): 目标文件夹路径
 
     Raises:
         Exception: 源文件不存在则抛出异常
@@ -265,11 +287,8 @@ def copy_folder(from_folder_path: str | Path, to_folder_path: str | Path):
     """复制文件夹中的所有文件到指定路径
 
     Args:
-        from_folder_path: 源文件夹路径
-        to_folder_path: 目标文件夹路径
-
-    Raises:
-        Exception: check_file_exists打开后, 源文件不存在则抛出异常
+        from_folder_path (str | Path): 源文件夹路径
+        to_folder_path (str | Path): 目标文件夹路径
     """
     shutil.copytree(from_folder_path, to_folder_path)
 
@@ -277,10 +296,10 @@ def copy_multiple_file(from_folder_path: str | Path, to_folder_path: str | Path,
     """复制文件夹中指定的多个文件到指定路径
 
     Args:
-        from_folder_path: 源文件夹路径
-        to_folder_path: 目标文件夹路径
-        file_name_list: 源文件夹中的文件名列表
-        max_workers: 一次执行的最大线程数, 默认1
+        from_folder_path (str | Path): 源文件夹路径
+        to_folder_path (str | Path): 目标文件夹路径
+        file_name_list (list): 源文件夹中的文件名列表
+        max_workers (int, optional): 一次执行的最大线程数. Defaults to 1.
     """
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         for file_name in file_name_list:
@@ -293,8 +312,8 @@ def move_single_file(from_file_path: str | Path, to_file_folder: str | Path):
     """移动单个文件
 
     Args:
-        from_file_path: 源文件路径
-        to_file_folder: 目标文件夹路径
+        from_file_path (str | Path): 源文件路径
+        to_file_folder (str | Path): 目标文件夹路径
 
     Raises:
         Exception: 源文件不存在则抛出异常
@@ -311,8 +330,8 @@ def move_folder(from_folder_path: str | Path, to_folder_path: str | Path):
     """将文件夹中的所有文件移动到指定路径
 
     Args:
-        from_folder_path: 源文件夹路径
-        to_folder_path: 目标文件夹路径
+        from_folder_path (str | Path): 源文件夹路径
+        to_folder_path (str | Path): 目标文件夹路径
     """
     shutil.move(from_folder_path, to_folder_path)
 
@@ -320,10 +339,10 @@ def move_multiple_file(from_folder_path: str | Path, to_folder_path: str | Path,
     """移动文件夹中指定的多个文件到指定路径
 
     Args:
-        from_folder_path: 源文件夹路径
-        to_folder_path: 目标文件夹路径
-        file_name_list: 源文件夹中的文件名列表
-        max_workers: 一次执行的最大线程数, 默认1
+        from_folder_path (str | Path): 源文件夹路径
+        to_folder_path (str | Path): 目标文件夹路径
+        file_name_list (list): 源文件夹中的文件名列表
+        max_workers (int, optional): 一次执行的最大线程数. Defaults to 1.
     """
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         for file_name in file_name_list:
