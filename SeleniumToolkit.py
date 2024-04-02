@@ -198,31 +198,39 @@ class SeleniumToolkit:
         """
         return WebDriverWait(self.driver, timeout).until(EC.visibility_of_element_located((by, value)))
     
-    def find_element(self, by: str, value: str, timeout: int=60) -> WebElement:
+    def find_element(self, by: str, value: str, element: WebElement=None, timeout: int=60) -> WebElement:
         """获取元素, 该方法会判断元素是否被加载到了DOM树里, 并不代表该元素一定可见
 
         Args:
             by (str): 元素获取策略
             value (str): 元素定位值
+            element (WebElement, optional): 元素,不为None则获取该元素的子元素 . Defaults to None.
             timeout (int, optional): 等待超时时间. Defaults to 60.
 
         Returns:
             WebElement: 对应元素
         """
-        return WebDriverWait(self.driver, timeout).until(EC.presence_of_element_located((by, value)))
+        if element is None:
+            return WebDriverWait(self.driver, timeout).until(EC.presence_of_element_located((by, value)))
+        else:
+            return element.find_element(by, value)
 
-    def find_elements(self, by: str, value: str, timeout: int=60) -> list[WebElement]:
+    def find_elements(self, by: str, value: str, element: WebElement=None, timeout: int=60) -> list[WebElement]:
         """获取一系列元素
 
         Args:
             by (str): 元素获取策略
             value (str): 元素定位值
+            element (WebElement, optional): 元素,不为None则获取该元素的子元素 . Defaults to None.
             timeout (int, optional): 等待超时时间. Defaults to 60.
 
         Returns:
             list[WebElement]: 对应的所有元素
         """
-        return WebDriverWait(self.driver, timeout).until(EC.presence_of_all_elements_located((by, value)))
+        if element is None:
+            return WebDriverWait(self.driver, timeout).until(EC.presence_of_all_elements_located((by, value)))
+        else:
+            return element.find_elements(by, value)
 
     def click(self, by: str=None, value: str=None, element: WebElement=None, timeout: int=60):
         """点击元素
