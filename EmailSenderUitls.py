@@ -1,176 +1,247 @@
 """邮件工具类 EmailSenderUitls"""
-import smtplib,imghdr
+import smtplib, os, traceback
 from email.mime.image import MIMEImage
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from email.mime.base import MIMEBase
 from email.header import Header
-import traceback
+from email import encoders
 
 
-def sendEmail_Text(sender: str, sender_password: str, receiver_list: list, title: str, content: str, smtp_server: str) -> bool:
+def send_text_email(sender: str, sender_password: str, receiver_list: list, CC_list: list,
+                    title: str, content: str, smtp_server: str, smtp_port: int=25, start_tls: bool=True):
     """发送纯文本邮件
 
     Args:
         sender (str): 发送人邮件
         sender_password (str): 发送人邮件的密码或授权码
-        receiver_list (list): 接收人邮件, 可以为多个, 用列表填充
+        receiver_list (list): 接收人邮件
+        CC_list (list): 抄送人邮件列表, 为空列表则不抄送
         title (str): 邮件标题
         content (str): 邮件正文内容
         smtp_server (str): 邮件发送的服务器
-
-    Returns:
-       bool: 是否发送成功, 成功为True, 不成功为False
+        smtp_port (int, optional): 邮件发送的端口. Defaults to 25.
+        start_tls (bool, optional): 是否启用TLS加密. Defaults to True.
     """
-    message = MIMEText(content, 'plain', 'utf-8')  # 发送内容 （文本内容, 发送格式, 编码格式）
-    message['From'] = sender  # 发送地址
-    message['To'] = ','.join(receiver_list)  # 接受地址
-    message['Subject'] = Header(title, 'utf-8')  # 邮件标题
+    message = MIMEText(content, 'plain', 'utf-8')
+    message['From'] = sender
+    message['To'] = ','.join(receiver_list)
+    message['Cc'] = ','.join(CC_list)
+    message['Subject'] = Header(title, 'utf-8')
 
     try:
-        smtp = smtplib.SMTP(smtp_server, 25)  # 创建SMTP对象
-        smtp.starttls()  # 启用TLS加密
-        smtp.login(sender, sender_password)  # 登录邮箱账号
-        smtp.sendmail(sender, receiver_list, message.as_string())  # 发送账号信息
-        return True
+        smtp = smtplib.SMTP_SSL(smtp_server, smtp_port)
+        if start_tls:
+            smtp.starttls()
+        smtp.login(sender, sender_password)
+        smtp.sendmail(sender, receiver_list, message.as_string())
     except smtplib.SMTPException as e:
-        traceback.print_exc(e)
-        return False
+        raise Exception(f"Send email fail", traceback.format_exc(e))
     finally:
         smtp.quit()
 
-def sendEmail_Html(sender: str, sender_password: str, receiver_list: list, title: str, content_html: str, smtp_server: str) -> bool:
-    """发送HTML格式邮件, 强烈推荐用这个发送纯文本邮件
+def send_html_email(sender: str, sender_password: str, receiver_list: list, CC_list: list,
+                    title: str, content_html: str, smtp_server: str, smtp_port: int=25, start_tls: bool=True):
+    """发送HTML格式邮件
 
     Args:
         sender (str): 发送人邮件
         sender_password (str): 发送人邮件的密码或授权码
-        receiver_list (list): 接收人邮件, 可以为多个, 用列表填充
+        receiver_list (list): 接收人邮件
+        CC_list (list): 抄送人邮件列表, 为空列表则不抄送
         title (str): 邮件标题
-        content_html (str): 邮件正文内容, HTML格式, 这会在邮件上显示格式
+        content_html (str): 邮件正文内容, HTML格式, 这会在邮件上显示对应的格式
         smtp_server (str): 邮件发送的服务器
-
-    Returns:
-        bool: 是否发送成功, 成功为True, 不成功为False
+        smtp_port (int, optional): 邮件发送的端口. Defaults to 25.
+        start_tls (bool, optional): 是否启用TLS加密. Defaults to True.
     """
-    message = MIMEText(content_html, 'html', 'utf-8')  # 发送内容 （文本内容, 发送格式, 编码格式）
-    message['From'] = sender  # 发送地址
-    message['To'] = ','.join(receiver_list)  # 接受地址
-    message['Subject'] = Header(title, 'utf-8')  # 邮件标题
+    message = MIMEText(content_html, 'html', 'utf-8')
+    message['From'] = sender
+    message['To'] = ','.join(receiver_list)
+    message['Cc'] = ','.join(CC_list)
+    message['Subject'] = Header(title, 'utf-8')
 
     try:
-        smtp = smtplib.SMTP(smtp_server, 25)  # 创建SMTP对象
-        smtp.starttls()  # 启用TLS加密
-        smtp.login(sender, sender_password)  # 登录邮箱账号
-        smtp.sendmail(sender, receiver_list, message.as_string())  # 发送账号信息
-        return True
+        smtp = smtplib.SMTP(smtp_server, smtp_port)
+        if start_tls:
+            smtp.starttls()
+        smtp.login(sender, sender_password)
+        smtp.sendmail(sender, receiver_list, message.as_string())
     except smtplib.SMTPException as e:
-        traceback.print_exc(e)
-        return False
+        raise Exception(f"Send email fail, {traceback.format_exc(e)}")
     finally:
         smtp.quit()
 
-def sendEmail_file(sender: str, sender_password: str, receiver_list: list, title: str, content_html: str, file_path_list: list, file_name_list: list, smtp_server: str) -> bool:
-    """发送HTML格式邮件, 并带上附件
+def send_email_with_embedded_images(sender: str, sender_password: str, receiver_list: list, CC_list: list,
+                    title: str, content_html: str, smtp_server: str, image_paths: list, 
+                    smtp_port: int=25, start_tls: bool=True):
+    """发送HTML格式邮件, 并在文章中内嵌图片
 
     Args:
         sender (str): 发送人邮件
         sender_password (str): 发送人邮件的密码或授权码
-        receiver_list (list): 接收人邮件, 可以为多个, 用列表填充
+        receiver_list (list): 接收人邮件
+        CC_list (list): 抄送人邮件列表, 为空列表则不抄送
         title (str): 邮件标题
-        content_html (str): 邮件正文内容, HTML格式, 这会在邮件上显示格式
-        file_path_list (list): 附件路径, 只是路径不包括附件名, 如src/main/, !!!必须用列表存!!!, eg.['src/main/','src/jar/']
-        file_name_list (list): 附件名称, !!!必须用列表存!!!, 每个附件名称的下标与路径列表对应, eg.['1.txt','2.jar'], 与附件路径例子组合成src/main/1.txt；src/jar/2.jar
+        content_html (str): 邮件正文内容, HTML格式, 这会在邮件上显示对应的格式
         smtp_server (str): 邮件发送的服务器
-
-    Returns:
-        bool: 是否发送成功, 成功为True, 不成功为False
+        image_paths (list): 图片的路径列表, 图片会被内嵌到邮件中
+        smtp_port (int, optional): 邮件发送的端口. Defaults to 25.
+        start_tls (bool, optional): 是否启用TLS加密. Defaults to True.
+        
+    Example:
+        >>> sender = 'your_email@example.com' # 发送人邮件地址
+        >>> sender_password = 'your_password' # 发送人邮件密码或授权码, 请替换为实际值
+        >>> receiver_list = ['receiver1@example.com', 'receiver2@example.com'] # 接收人邮件列表, 请替换为实际值
+        >>> CC_list = ['cc1@example.com', 'cc2@example.com'] # 抄送人邮件列表, 为空列表则不抄送, 请替换为实际值
+        >>> title = 'Test Email with Embedded Images' # 邮件标题, 请替换为实际值
+        >>> smtp_server = 'smtp.example.com' # 邮件发送的服务器, 请替换为实际值
+        >>> image_paths = ['path/to/image1.jpg', 'path/to/image2.jpg'] # 图片路径列表
+        >>> # 邮件正文内容, HTML格式, 这会在邮件上显示对应的格式, 使用内嵌图片时加入<img src="cid:图片文件名.png" alt="alt名">在文章内, 会在文章中显示对应的图片, 请替换为实际值
+        >>> content_html = '''<p>This is a test email with embedded images.</p><img src="cid:image1.png" alt="Image 1"><img src="cid:image2.png" alt="Image 2">''' 
+        >>> send_email_with_embedded_images(sender, sender_password, receiver_list, CC_list, title, content_html, smtp_server, image_paths)
     """
-    message = MIMEMultipart()  # 创建一个带附件的实例
-    message['From'] = sender  # 发送地址
-    message['To'] = ','.join(receiver_list)  # 接受地址
-    message['Subject'] = Header(title, 'utf-8')  # 邮件标题
-    message.attach(MIMEText(content_html, 'html', 'utf-8'))  # 添加邮件正文内容
+    # 设置邮件内容
+    message = MIMEMultipart('related')
+    message['From'] = sender
+    message['To'] = ','.join(receiver_list)
+    message['Cc'] = ','.join(CC_list)
+    message['Subject'] = Header(title, 'utf-8')
 
-    i = 0
-    while (i < len(file_path_list)):
-        with open(file_path_list[i] + file_name_list[i], 'rb') as file:
-            if(imghdr.what(file_path_list[i] + file_name_list[i]) is not None):
-                appendix = MIMEImage(file.read())
-                appendix["Content-Type"] = 'application/octet-stream'  # 此处为固定的格式, 可以在浏览器中查看到相关信息
-                appendix["Content-Disposition"] = f'attachment; filename="{file_name_list[i]}"'  # 这里的 filename 命名任意, 即在邮件中显示的名称
-                message.attach(appendix)
-            else:
-                appendix = MIMEText(file.read(), 'base64', 'utf-8')  # 构造附件, 传送文件
-                appendix["Content-Type"] = 'application/octet-stream'  # 此处为固定的格式, 可以在浏览器中查看到相关信息
-                appendix["Content-Disposition"] = f'attachment; filename="{file_name_list[i]}"'  # 这里的 filename 命名任意, 即在邮件中显示的名称
-                message.attach(appendix)  # 添加附件
-            file.close()
-        i = i + 1
+    # 添加 HTML 正文
+    msg_alternative = MIMEMultipart('alternative')
+    message.attach(msg_alternative)
+    msg_alternative.attach(MIMEText(content_html, 'html', 'utf-8'))
+    
+    # 为每个图片创建一个 MIME image 对象，并将其添加到邮件中
+    for image_path in image_paths:
+        with open(image_path, 'rb') as f:
+            img_data = f.read()
+        # 获取图片文件名作为 CID (Content ID)
+        image_name = os.path.basename(image_path)
+        cid = '<' + image_name + '>'
+        # 创建一个 MIME image 对象并设置相应的 headers
+        img = MIMEImage(img_data)
+        img.add_header('Content-ID', cid)
+        img.add_header('Content-Disposition', 'inline', filename=image_name)
+        # 将 MIME image 对象添加到邮件中
+        message.attach(img)
 
     try:
-        smtp = smtplib.SMTP(smtp_server, 25)  # 创建SMTP对象
-        smtp.starttls()  # 启用TLS加密
-        smtp.login(sender, sender_password)  # 登录邮箱账号
-        smtp.sendmail(sender, receiver_list, message.as_string())  # 发送账号信息
-        return True
+        smtp = smtplib.SMTP(smtp_server, smtp_port)
+        if start_tls:
+            smtp.starttls()
+        smtp.login(sender, sender_password)
+        smtp.sendmail(sender, receiver_list, message.as_string())
     except smtplib.SMTPException as e:
-        traceback.print_exc(e)
-        return False
+        raise Exception(f"Send email fail, {traceback.format_exc(e)}")
     finally:
         smtp.quit()
 
-def sendEmail_image(sender: str, sender_password: str, receiver_list: list, title: str, content_html: str, file_path_list: list, file_name_list: list, image_path_list: list,
-                    image_name_list: list, smtp_server: str) -> bool:
-    """发送HTML格式邮件, 正文内嵌图片, 并带上附件。
+def send_html_with_attachment(sender: str, sender_password: str, receiver_list: list, CC_list: list,
+                    title: str, content_html: str, smtp_server: str, file_path_list: list, 
+                    smtp_port: int=25, start_tls: bool=True):
+    """发送HTML格式邮件, 并附带附件
 
     Args:
         sender (str): 发送人邮件
         sender_password (str): 发送人邮件的密码或授权码
-        receiver_list (list): 接收人邮件, 可以为多个, 用列表填充
+        receiver_list (list): 接收人邮件
+        CC_list (list): 抄送人邮件列表, 为空列表则不抄送
         title (str): 邮件标题
-        content_html (str): 邮件正文内容, HTML格式, 这会在邮件上显示格式, 注意img标准中src格式为cid:xxx, xxx与形参image_name_list中的参数相同, 例如:<img src=\"cid:TestImage.jpg\"></p>, 那么image_name_list里面应该就有TestImage.jpg
-        file_path_list (list): 附件路径, 只是路径不包括附件名, 如src/main/, !!!必须用列表存!!!, eg.['src/main/','src/jar/']
-        file_name_list (list): 附件名称, !!!必须用列表存!!!, 每个附件名称的下标与路径列表对应, eg.['1.txt','2.jar'], 与附件路径例子组合成src/main/1.txt；src/jar/2.jar
-        image_path_list (list): 图片路径, 只是路径不包括附件名, 如src/main/, !!!必须用列表存!!!, eg.['src/main/','src/jar/']
-        image_name_list (list): 图片名称, !!!必须用列表存!!!, 每个附件名称的下标与路径列表对应, eg.['1.png','2.jpg'], 与附件路径例子组合成src/main/1.png；src/jar/2.jpg
+        content_html (str): 邮件正文内容, HTML格式, 这会在邮件上显示对应的格式
         smtp_server (str): 邮件发送的服务器
-
-    Returns:
-        bool: 是否发送成功, 成功为True, 不成功为False
+        file_path_list (list): 附件的路径列表, 附件会被附带在邮件中
+        smtp_port (int, optional): 邮件发送的端口. Defaults to 25.
+        start_tls (bool, optional): 是否启用TLS加密. Defaults to True.
     """
-    message = MIMEMultipart()  # 创建一个带附件的实例
-    message['From'] = sender  # 发送地址
-    message['To'] = ','.join(receiver_list)  # 接受地址
-    message['Subject'] = Header(title, 'utf-8')  # 邮件标题
-    message.attach(MIMEText(content_html, 'html', 'utf-8'))  # 添加邮件正文内容
+    message = MIMEMultipart()
+    message['From'] = sender
+    message['To'] = ','.join(receiver_list)
+    message['Cc'] = ','.join(CC_list)
+    message['Subject'] = Header(title, 'utf-8')
+    message.attach(MIMEText(content_html, 'html', 'utf-8'))
+    
+    # 遍历所有附件并添加到邮件中
+    for file_path in file_path_list:
+        file_name = os.path.basename(file_path)
+        with open(file_path, 'rb') as attachment:
+            part = MIMEBase('application', 'octet-stream')
+            part.set_payload(attachment.read())
+            encoders.encode_base64(part)
+        part.add_header('Content-Disposition', f'attachment; filename= {file_name}')
+        message.attach(part)
+    
+    try:
+        smtp = smtplib.SMTP(smtp_server, smtp_port)
+        if start_tls:
+            smtp.starttls()
+        smtp.login(sender, sender_password)
+        smtp.sendmail(sender, receiver_list, message.as_string())
+    except smtplib.SMTPException as e:
+        raise Exception(f"Send email fail, {traceback.format_exc(e)}")
+    finally:
+        smtp.quit()
 
-    i = 0
-    while (i < len(file_path_list)):
-        with open(file_path_list[i] + file_name_list[i], 'rb') as file:
-            appendix = MIMEText(file.read(), 'base64', 'utf-8')  # 构造附件, 传送文件
-            appendix["Content-Type"] = 'application/octet-stream'  # 此处为固定的格式, 可以在浏览器中查看到相关信息
-            appendix["Content-Disposition"] = f'attachment; filename="{file_name_list[i]}"'  # 这里的 filename 命名任意, 即在邮件中显示的名称
-            message.attach(appendix)  # 添加附件
-            file.close()
-        i = i + 1
+def send_email_with_embedded_images_and_attachments(sender: str, sender_password: str, receiver_list: list, CC_list: list,
+                    title: str, content_html: str, smtp_server: str, file_path_list: list, image_paths: list, 
+                    smtp_port: int=25, start_tls: bool=True):
+    """发送HTML格式邮件, 并在文章中内嵌图片且附带附件
 
-    i = 0
-    while (i < len(image_path_list)):
-        with open(image_path_list[i] + image_name_list[i], 'rb') as file:
-            msgImage = MIMEImage(file.read())  # 添加图片附件
-            msgImage.add_header('Content-ID', image_name_list[i])  # 这个id用于上面html获取图片
-            message.attach(msgImage)
-            file.close()
-        i = i + 1
+    Args:
+        sender (str): 发送人邮件
+        sender_password (str): 发送人邮件的密码或授权码
+        receiver_list (list): 接收人邮件
+        CC_list (list): 抄送人邮件列表, 为空列表则不抄送
+        title (str): 邮件标题
+        content_html (str): 邮件正文内容, HTML格式, 这会在邮件上显示对应的格式
+        smtp_server (str): 邮件发送的服务器
+        file_path_list (list): 附件的路径列表, 附件会被附带在邮件中
+        image_paths (list): 图片的路径列表, 图片会被内嵌到邮件中
+        smtp_port (int, optional): 邮件发送的端口. Defaults to 25.
+        start_tls (bool, optional): 是否启用TLS加密. Defaults to True.
+    """
+    # 创建邮件的根部分
+    message = MIMEMultipart('mixed')
+    message['From'] = sender
+    message['To'] = ','.join(receiver_list)
+    message['Cc'] = ','.join(CC_list)
+    message['Subject'] = Header(title, 'utf-8')
+
+    # 添加包含 HTML 和内嵌图片的邮件部分
+    msg_alternative = MIMEMultipart('alternative')
+    message.attach(msg_alternative)
+
+    # 添加 HTML 正文
+    msg_alternative.attach(MIMEText(content_html, 'html', 'utf-8'))
+
+    # 添加内嵌图片
+    for image_path in image_paths:
+        with open(image_path, 'rb') as f:
+            img_data = f.read()
+        image_name = os.path.basename(image_path)
+        cid = '<' + image_name + '>'
+        img = MIMEImage(img_data, name=image_name)
+        img.add_header('Content-ID', cid)
+        msg_alternative.attach(img)
+
+    # 遍历所有附件并添加到邮件中
+    for file_path in file_path_list:
+        file_name = os.path.basename(file_path)
+        with open(file_path, 'rb') as attachment:
+            part = MIMEBase('application', 'octet-stream')
+            part.set_payload(attachment.read())
+            encoders.encode_base64(part)
+        part.add_header('Content-Disposition', f'attachment; filename= {file_name}')
+        message.attach(part)
 
     try:
-        smtp = smtplib.SMTP()  # 创建SMTP对象
-        smtp.connect(smtp_server)  # 连接服务器
-        smtp.login(sender, sender_password)  # 登录邮箱账号
-        smtp.sendmail(sender, receiver_list, message.as_string())  # 发送账号信息
-        return True
+        smtp = smtplib.SMTP(smtp_server, smtp_port)
+        if start_tls:
+            smtp.starttls()
+        smtp.login(sender, sender_password)
+        smtp.sendmail(sender, receiver_list, message.as_string())
     except smtplib.SMTPException as e:
-        traceback.print_exc(e)
-        return False
+        raise Exception(f"Send email fail, {traceback.format_exc(e)}")
     finally:
         smtp.quit()
