@@ -9,7 +9,7 @@ from email import encoders
 
 
 def send_text_email(sender: str, sender_password: str, receiver_list: list, CC_list: list,
-                    title: str, content: str, smtp_server: str, smtp_port: int=25, start_tls: bool=True):
+                    title: str, content: str, smtp_server: str, smtp_port: int, start_tls: bool=True):
     """发送纯文本邮件
 
     Args:
@@ -20,7 +20,7 @@ def send_text_email(sender: str, sender_password: str, receiver_list: list, CC_l
         title (str): 邮件标题
         content (str): 邮件正文内容
         smtp_server (str): 邮件发送的服务器
-        smtp_port (int, optional): 邮件发送的端口. Defaults to 25.
+        smtp_port (int, optional): 邮件发送的端口
         start_tls (bool, optional): 是否启用TLS加密. Defaults to True.
     """
     message = MIMEText(content, 'plain', 'utf-8')
@@ -35,13 +35,12 @@ def send_text_email(sender: str, sender_password: str, receiver_list: list, CC_l
             smtp.starttls()
         smtp.login(sender, sender_password)
         smtp.sendmail(sender, receiver_list, message.as_string())
+        smtp.quit()
     except smtplib.SMTPException as e:
         raise Exception(f"Send email fail", traceback.format_exc(e))
-    finally:
-        smtp.quit()
 
 def send_html_email(sender: str, sender_password: str, receiver_list: list, CC_list: list,
-                    title: str, content_html: str, smtp_server: str, smtp_port: int=25, start_tls: bool=True):
+                    title: str, content_html: str, smtp_server: str, smtp_port: int, start_tls: bool=True):
     """发送HTML格式邮件
 
     Args:
@@ -52,7 +51,7 @@ def send_html_email(sender: str, sender_password: str, receiver_list: list, CC_l
         title (str): 邮件标题
         content_html (str): 邮件正文内容, HTML格式, 这会在邮件上显示对应的格式
         smtp_server (str): 邮件发送的服务器
-        smtp_port (int, optional): 邮件发送的端口. Defaults to 25.
+        smtp_port (int, optional): 邮件发送的端口
         start_tls (bool, optional): 是否启用TLS加密. Defaults to True.
     """
     message = MIMEText(content_html, 'html', 'utf-8')
@@ -67,14 +66,13 @@ def send_html_email(sender: str, sender_password: str, receiver_list: list, CC_l
             smtp.starttls()
         smtp.login(sender, sender_password)
         smtp.sendmail(sender, receiver_list, message.as_string())
+        smtp.quit()
     except smtplib.SMTPException as e:
         raise Exception(f"Send email fail, {traceback.format_exc(e)}")
-    finally:
-        smtp.quit()
 
 def send_email_with_embedded_images(sender: str, sender_password: str, receiver_list: list, CC_list: list,
                     title: str, content_html: str, smtp_server: str, image_paths: list, 
-                    smtp_port: int=25, start_tls: bool=True):
+                    smtp_port: int, start_tls: bool=True):
     """发送HTML格式邮件, 并在文章中内嵌图片
 
     Args:
@@ -86,7 +84,7 @@ def send_email_with_embedded_images(sender: str, sender_password: str, receiver_
         content_html (str): 邮件正文内容, HTML格式, 这会在邮件上显示对应的格式
         smtp_server (str): 邮件发送的服务器
         image_paths (list): 图片的路径列表, 图片会被内嵌到邮件中
-        smtp_port (int, optional): 邮件发送的端口. Defaults to 25.
+        smtp_port (int, optional): 邮件发送的端口
         start_tls (bool, optional): 是否启用TLS加密. Defaults to True.
         
     Example:
@@ -97,6 +95,7 @@ def send_email_with_embedded_images(sender: str, sender_password: str, receiver_
         >>> title = 'Test Email with Embedded Images' # 邮件标题, 请替换为实际值
         >>> smtp_server = 'smtp.example.com' # 邮件发送的服务器, 请替换为实际值
         >>> image_paths = ['path/to/image1.jpg', 'path/to/image2.jpg'] # 图片路径列表
+        >>> smtp_port = 999 # 邮件发送的端口, 请替换为实际值
         >>> # 邮件正文内容, HTML格式, 这会在邮件上显示对应的格式, 使用内嵌图片时加入<img src="cid:图片文件名.png" alt="alt名">在文章内, 会在文章中显示对应的图片, 请替换为实际值
         >>> content_html = '''<p>This is a test email with embedded images.</p><img src="cid:image1.png" alt="Image 1"><img src="cid:image2.png" alt="Image 2">''' 
         >>> send_email_with_embedded_images(sender, sender_password, receiver_list, CC_list, title, content_html, smtp_server, image_paths)
@@ -133,14 +132,13 @@ def send_email_with_embedded_images(sender: str, sender_password: str, receiver_
             smtp.starttls()
         smtp.login(sender, sender_password)
         smtp.sendmail(sender, receiver_list, message.as_string())
+        smtp.quit()
     except smtplib.SMTPException as e:
         raise Exception(f"Send email fail, {traceback.format_exc(e)}")
-    finally:
-        smtp.quit()
 
 def send_html_with_attachment(sender: str, sender_password: str, receiver_list: list, CC_list: list,
                     title: str, content_html: str, smtp_server: str, file_path_list: list, 
-                    smtp_port: int=25, start_tls: bool=True):
+                    smtp_port: int, start_tls: bool=True):
     """发送HTML格式邮件, 并附带附件
 
     Args:
@@ -152,7 +150,7 @@ def send_html_with_attachment(sender: str, sender_password: str, receiver_list: 
         content_html (str): 邮件正文内容, HTML格式, 这会在邮件上显示对应的格式
         smtp_server (str): 邮件发送的服务器
         file_path_list (list): 附件的路径列表, 附件会被附带在邮件中
-        smtp_port (int, optional): 邮件发送的端口. Defaults to 25.
+        smtp_port (int, optional): 邮件发送的端口
         start_tls (bool, optional): 是否启用TLS加密. Defaults to True.
     """
     message = MIMEMultipart()
@@ -178,14 +176,13 @@ def send_html_with_attachment(sender: str, sender_password: str, receiver_list: 
             smtp.starttls()
         smtp.login(sender, sender_password)
         smtp.sendmail(sender, receiver_list, message.as_string())
+        smtp.quit()
     except smtplib.SMTPException as e:
         raise Exception(f"Send email fail, {traceback.format_exc(e)}")
-    finally:
-        smtp.quit()
 
 def send_email_with_embedded_images_and_attachments(sender: str, sender_password: str, receiver_list: list, CC_list: list,
                     title: str, content_html: str, smtp_server: str, file_path_list: list, image_paths: list, 
-                    smtp_port: int=25, start_tls: bool=True):
+                    smtp_port: int, start_tls: bool=True):
     """发送HTML格式邮件, 并在文章中内嵌图片且附带附件
 
     Args:
@@ -198,7 +195,7 @@ def send_email_with_embedded_images_and_attachments(sender: str, sender_password
         smtp_server (str): 邮件发送的服务器
         file_path_list (list): 附件的路径列表, 附件会被附带在邮件中
         image_paths (list): 图片的路径列表, 图片会被内嵌到邮件中
-        smtp_port (int, optional): 邮件发送的端口. Defaults to 25.
+        smtp_port (int, optional): 邮件发送的端口
         start_tls (bool, optional): 是否启用TLS加密. Defaults to True.
     """
     # 创建邮件的根部分
@@ -241,7 +238,6 @@ def send_email_with_embedded_images_and_attachments(sender: str, sender_password
             smtp.starttls()
         smtp.login(sender, sender_password)
         smtp.sendmail(sender, receiver_list, message.as_string())
+        smtp.quit()
     except smtplib.SMTPException as e:
         raise Exception(f"Send email fail, {traceback.format_exc(e)}")
-    finally:
-        smtp.quit()
