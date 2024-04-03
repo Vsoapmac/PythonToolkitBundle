@@ -55,6 +55,34 @@ def load_timestamp_to_datetime(timestamp: float) -> datetime:
     """
     return datetime.fromtimestamp(timestamp)
 
+def load_datetime_to_timestamp(datetime: datetime) -> float:
+    """将datetime对象转换成时间戳
+
+    Args:
+        datetime (datetime): datetime对象
+
+    Returns:
+        float: 时间戳
+    """
+    return time.mktime(datetime.timetuple())
+
+def format_second_to_time(second: int|float|None, keep_millisecond: bool=False) -> str:
+    """将秒数转换成时间字符串
+
+    Args:
+        second (int | float): 秒, 为None则返回--:--:--
+        keep_millisecond (bool, optional): 是否保留毫秒. Defaults to False.
+
+    Returns:
+        str: 时间字符串, 格式H:mm:ss或H:mm:ss.ms
+    """
+    if second is None:
+        return "--:--:--"
+    total_seconds = timedelta(seconds=second).total_seconds()
+    if keep_millisecond:
+        total_seconds = total_seconds - (total_seconds % datetime.timedelta(seconds=1).total_seconds())
+    return str(timedelta(seconds=total_seconds))
+
 def record() -> float:
     """记录当前时间
 
@@ -101,7 +129,7 @@ def caculate_times(start: str, end: str, pattern: str = "%H:%M:%S", return_mode=
         pattern: 输入和返回时间的基准格式, 默认时:分:秒
         return_mode: 返回什么单位的时间差, 单位为秒s、分钟min、小时h、天day、月month和年year
         ndigits_number: 保留多少位
-        
+      
     Returns:
         时间差计算结果
     """
@@ -122,14 +150,13 @@ def caculate_times(start: str, end: str, pattern: str = "%H:%M:%S", return_mode=
         return round(d.days / 365, ndigits_number)
     else:
         raise ValueError(f"类型无法识别, 不能为{return_mode}")
-        
+      
 def caculate_timer(func):
     """以装饰器的形式, 计算函数执行的所需时间, 在函数上@该函数即可
 
     Args:
         func: 运行函数
     """
-
     def func_wrapper(*args, **kwargs):
         time_start = time.time()
         result = func(*args, **kwargs)
@@ -139,7 +166,6 @@ def caculate_timer(func):
             else f"{round(time_spend / 60 / 60, 3)} h" if time_spend > 60 * 60 else f"{round(time_spend, 3)} s"
         print(f"函数[{func.__name__}] 总耗时: {time_spend_result}")
         return result
-
     return func_wrapper
 
 def split_times(time: str, pattern: str) -> dict:
