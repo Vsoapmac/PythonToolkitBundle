@@ -66,6 +66,29 @@ def load_datetime_to_timestamp(datetime: datetime) -> float:
     """
     return time.mktime(datetime.timetuple())
 
+def fomat_datetime(year: int, month: int=1, day: int=1, hour: int=0, minute: int=0, second: int=0, 
+                   microsecond: int=0, transfer_to_str: bool=True, pattern: str="%Y-%m-%d %H:%M:%S.%f") -> str|datetime:
+    """将时间格式化
+
+    Args:
+        year (int): 年
+        month (int, optional): 月. Defaults to 1.
+        day (int, optional): 日. Defaults to 1.
+        hour (int, optional): 时. Defaults to 0.
+        minute (int, optional): 分. Defaults to 0.
+        second (int, optional): 秒. Defaults to 0.
+        microsecond (int, optional): 毫秒. Defaults to 0.
+        transfer_to_str (bool, optional): 是否转换成字符串. Defaults to True.
+        pattern (str, optional): 时间格式. Defaults to "%Y-%m-%d %H:%M:%S.%f".
+
+    Returns:
+        str|datetime: 时间字符串或datetime对象, 取决于transfer_to_str的值
+    """
+    time = datetime(year, month, day, hour, minute, second, microsecond)
+    if transfer_to_str:
+        return time.strftime(pattern)  # 转换成字符串格式
+    return time
+
 def format_second_to_time(second: int|float|None, keep_millisecond: bool=False) -> str:
     """将秒数转换成时间字符串
 
