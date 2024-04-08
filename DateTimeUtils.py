@@ -66,7 +66,7 @@ def load_datetime_to_timestamp(datetime: datetime) -> float:
     """
     return time.mktime(datetime.timetuple())
 
-def fomat_datetime(year: int, month: int=1, day: int=1, hour: int=0, minute: int=0, second: int=0, 
+def format_datetime(year: int, month: int=1, day: int=1, hour: int=0, minute: int=0, second: int=0, 
                    microsecond: int=0, transfer_to_str: bool=True, pattern: str="%Y-%m-%d %H:%M:%S.%f") -> str|datetime:
     """将时间格式化
 
@@ -102,8 +102,8 @@ def format_second_to_time(second: int|float|None, keep_millisecond: bool=False) 
     if second is None:
         return "--:--:--"
     total_seconds = timedelta(seconds=second).total_seconds()
-    if keep_millisecond:
-        total_seconds = total_seconds - (total_seconds % datetime.timedelta(seconds=1).total_seconds())
+    if not keep_millisecond:
+        total_seconds = total_seconds - (total_seconds % timedelta(seconds=1).total_seconds())
     return str(timedelta(seconds=total_seconds))
 
 def record() -> float:
