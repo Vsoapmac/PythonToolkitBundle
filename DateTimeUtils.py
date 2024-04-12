@@ -127,11 +127,10 @@ def end_record_and_caculate(print_message: bool=True, round_index=3, type="s") -
         时间差
 
     Examples:
-        >>> start = DateTimeUtils.record()
+        >>> DateTimeUtils.record()
         >>> print("test")
-        >>> end = DateTimeUtils.record()
-        >>> result = DateTimeUtils.caculate(start, end)
-        >>> result = DateTimeUtils.caculate(start, end, type='min')
+        >>> DateTimeUtils.end_record_and_caculate()
+        用时: 0.001 s
     """
     s = round(time.time() - record_time, round_index)
     if print_message:
