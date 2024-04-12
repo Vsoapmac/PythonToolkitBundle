@@ -112,14 +112,14 @@ def record() -> float:
     Returns:
         时间浮点
     """
-    return time.time()
+    global record_time
+    record_time = time.time()
+    return record_time
 
-def caculate(start: float, end: float, round_index=3, type="s") -> float:
+def end_record_and_caculate(print_message: bool=True, round_index=3, type="s") -> float:
     """计算时间差
 
     Args:
-        start: 开始时间
-        end: 结束时间
         round_index: 结果位数, 默认保留3位
         type: 返回类型, 有秒s(默认)、分钟min、小时h
 
@@ -133,7 +133,11 @@ def caculate(start: float, end: float, round_index=3, type="s") -> float:
         >>> result = DateTimeUtils.caculate(start, end)
         >>> result = DateTimeUtils.caculate(start, end, type='min')
     """
-    s = round(end - start, round_index)
+    s = round(time.time() - record_time, round_index)
+    if print_message:
+        time_spend_result = f"{round(s / 60, 3)} min" if 60 * 60 > s > 60  \
+            else f"{round(s / 60 / 60, 3)} h" if s > 60 * 60 else f"{round(s, 3)} s"
+        print(f"用时: {time_spend_result}")
     if type == "s":
         return s
     elif type == "min":
