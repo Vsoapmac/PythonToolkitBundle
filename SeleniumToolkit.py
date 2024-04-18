@@ -10,17 +10,203 @@ from selenium.webdriver.remote.webdriver import WebElement
 from selenium.webdriver.support import expected_conditions as EC
 
 
-class SeleniumToolkit:
-    """Selenium工具类, 用于封装selenium。使用该类, 请运行如下命令安装所需库存:
-    \npip install selenium
-    \npip install ddddocr
-    \npip install requests
-    \n请注意, selenium版本~=4.18
-    """
-    driver = None
-    by = By
-    keys = Keys
+class EdgeOptionsSetter:
+    _edge_options = None
     
+    def __init__(self):
+        """初始化edge启动参数"""
+        self._edge_options = webdriver.EdgeOptions()
+
+    def get_options(self) -> webdriver.EdgeOptions:
+        """获取edge启动参数"""
+        return self._edge_options
+
+    def set_user_agent(self, user_agent: bool|str):
+        """设置用户代理字符串, 让edge认为是在实际的浏览器上运行。
+        
+        Args:
+            user_agent (bool | str): 用户代理字符串
+        """
+        self._edge_options.add_argument(f'--user-agent="{user_agent}"')
+    
+    def set_incognito(self):
+        """无痕模式, 不会保留浏览记录"""
+        self._edge_options.add_argument('--incognito')
+        
+    def set_headless(self):
+        """无头模式, 浏览器不提供可视化界面"""
+        self._edge_options.add_argument('--headless')
+        
+    def set_start_maximized(self):
+        """最大化运行(全屏窗口)"""
+        self._edge_options.add_argument('--start-maximized')
+        
+    def set_window_size(self, width: int, height: int):
+        """设置浏览器分辨率
+        Args:
+            width (int): 长
+            height (int): 宽
+        """
+        self._edge_options.add_argument(f'--window-size={width}, {height}')
+    
+    def set_ignore_certificate_errors(self):
+        """忽视证书认证的不安全连接的错误"""
+        self._edge_options.add_argument("--ignore-certificate-errors")
+        
+    def set_ignore_ssl_errors(self):
+        """忽略SSL证书错误"""
+        self._edge_options.add_argument("--ignore-ssl-errors")
+        
+    def set_disable_infobars(self):
+        """禁用浏览器正在被自动化程序控制的提示"""
+        self._edge_options.add_argument('--disable-infobars')
+        
+    def set_no_sandbox(self):
+        """禁用沙盒模式(通常用于Linux环境下的无头模式)"""
+        self._edge_options.add_argument('--no-sandbox')
+        
+    def set_disable_gpu(self):
+        """禁用GPU加速, 用于解决特定的渲染问题"""
+        self._edge_options.add_argument('--disable-gpu')
+        
+    def set_disable_extensions(self):
+        """禁用所有扩展程序"""
+        self._edge_options.add_argument('--disable-extensions')
+        
+    def set_hide_scrollbars(self):
+        """隐藏页面滚动条, 用于解决一些特殊页面"""
+        self._edge_options.add_argument('--hide-scrollbars')
+        
+    def set_disable_images(self):
+        """在加载页面时不加载图片"""
+        self._edge_options.add_argument('--blink-settings=imagesEnabled=false')
+        
+    @classmethod
+    def edge_options_setter(cls, user_agent: bool|str=False, incognito: bool=False, headless: bool=False, start_maximized: bool=False, window_size: bool|tuple = False, 
+                            ignore_certificate_errors: bool=True, ignore_ssl_errors: bool=True, disable_infobars: bool=True, 
+                            no_sandbox: bool=False, disable_gpu: bool=False, disable_extensions: bool=False, 
+                            hide_scrollbars: bool=False, disable_images: bool=False) -> webdriver.EdgeOptions:
+        """设置edge启动参数
+
+        Args:
+            user_agent (bool | str, optional): 设置用户代理字符串, 让edge认为是在实际的浏览器上运行。若为False则不使用代理. Defaults to False.
+            incognito (bool, optional): 无痕模式, 不会保留浏览记录. Defaults to False.
+            headless (bool, optional): 无头模式, 浏览器不提供可视化界面. Defaults to False.
+            start_maximized (bool, optional): 最大化运行(全屏窗口). Defaults to False.
+            window_size (bool | tuple, optional): 设置浏览器分辨率, 若不为False输入分别率(左长, 右宽), eg:(1920, 1080). Defaults to False.
+            ignore_certificate_errors (bool, optional): 忽视证书认证的不安全连接的错误. Defaults to True.
+            ignore_ssl_errors (bool, optional): 忽略SSL证书错误. Defaults to True.
+            disable_infobars (bool, optional): 禁用浏览器正在被自动化程序控制的提示. Defaults to True.
+            no_sandbox (bool, optional): 禁用沙盒模式(通常用于Linux环境下的无头模式). Defaults to False.
+            disable_gpu (bool, optional): 禁用GPU加速, 用于解决特定的渲染问题. Defaults to False.
+            disable_extensions (bool, optional): 禁用所有扩展程序. Defaults to False.
+            hide_scrollbars (bool, optional): 隐藏页面滚动条, 用于解决一些特殊页面. Defaults to False.
+            disable_images (bool, optional): 在加载页面时不加载图片. Defaults to False.
+
+        Returns:
+            webdriver.ChromeOptions: edge启动参数
+        """
+        options = webdriver.EdgeOptions()
+        if user_agent:
+            options.add_argument(f'--user-agent="{user_agent}"')
+        if incognito:
+            options.add_argument('--incognito')
+        if headless:
+            options.add_argument('--headless')
+        if start_maximized:
+            options.add_argument('--start-maximized')
+        if window_size:
+            options.add_argument(f'--window-size={window_size[0]}x{window_size[1]}')
+        if ignore_certificate_errors:
+            options.add_argument("--ignore-certificate-errors")
+        if ignore_ssl_errors:
+            options.add_argument("--ignore-ssl-errors")
+        if disable_infobars:
+            options.add_argument('--disable-infobars')
+        if no_sandbox:
+            options.add_argument('--no-sandbox')
+        if disable_gpu:
+            options.add_argument('--disable-gpu')
+        if disable_extensions:
+            options.add_argument('--disable-extensions')
+        if hide_scrollbars:
+            options.add_argument('--hide-scrollbars')
+        if disable_images:
+            options.add_argument('--blink-settings=imagesEnabled=false')
+        return options
+    
+class ChromeOptionsSetter:
+    """用于设置chrome启动参数的类"""
+    _chrome_options = None
+    
+    def __init__(self):
+        """初始化chrome启动参数"""
+        self._chrome_options = webdriver.ChromeOptions()
+    
+    def get_options(self) -> webdriver.ChromeOptions:
+        """获取chrome启动参数"""
+        return self._chrome_options
+    
+    def set_user_agent(self, user_agent: bool|str):
+        """设置用户代理字符串, 让chrome认为是在实际的浏览器上运行。
+
+        Args:
+            user_agent (bool | str): 用户代理字符串
+        """
+        self._chrome_options.add_argument(f'--user-agent="{user_agent}"')
+    
+    def set_incognito(self):
+        """无痕模式, 不会保留浏览记录"""
+        self._chrome_options.add_argument('--incognito')
+    
+    def set_headless(self):
+        """无头模式, 浏览器不提供可视化界面"""
+        self._chrome_options.add_argument('--headless')
+    
+    def set_start_maximized(self):
+        """最大化运行(全屏窗口)"""
+        self._chrome_options.add_argument('--start-maximized')
+        
+    def set_window_size(self, width: int, height: int):
+        """设置浏览器分辨率
+
+        Args:
+            width (int): 长
+            height (int): 宽
+        """
+        self._chrome_options.add_argument(f'--window-size={width}x{height}')
+    
+    def set_ignore_certificate_errors(self):
+        """忽视证书认证的不安全连接的错误"""
+        self._chrome_options.add_argument("--ignore-certificate-errors")
+        
+    def set_ignore_ssl_errors(self):
+        """忽略SSL证书错误"""
+        self._chrome_options.add_argument("--ignore-ssl-errors")
+        
+    def set_disable_infobars(self):
+        """禁用浏览器正在被自动化程序控制的提示"""
+        self._chrome_options.add_argument('--disable-infobars')
+        
+    def set_no_sandbox(self):
+        """禁用沙盒模式(通常用于Linux环境下的无头模式)"""
+        self._chrome_options.add_argument('--no-sandbox')
+        
+    def set_disable_gpu(self):
+        """禁用GPU加速, 用于解决特定的渲染问题"""
+        self._chrome_options.add_argument('--disable-gpu')
+        
+    def set_disable_extensions(self):
+        """禁用所有扩展程序"""
+        self._chrome_options.add_argument('--disable-extensions')
+        
+    def set_hide_scrollbars(self):
+        """隐藏页面滚动条, 用于解决一些特殊页面"""
+        self._chrome_options.add_argument('--hide-scrollbars')
+        
+    def set_disable_images(self):
+        """在加载页面时不加载图片"""
+        self._chrome_options.add_argument('--blink-settings=imagesEnabled=false')
     
     @classmethod
     def chrome_options_setter(cls, user_agent: bool|str=False, incognito: bool=False, headless: bool=False, start_maximized: bool=False, window_size: bool|tuple = False, 
@@ -49,7 +235,7 @@ class SeleniumToolkit:
         """
         options = webdriver.ChromeOptions()
         if user_agent:
-            options.add_argument(f'user-agent="{user_agent}"')
+            options.add_argument(f'--user-agent="{user_agent}"')
         if incognito:
             options.add_argument('--incognito')
         if headless:
@@ -57,7 +243,7 @@ class SeleniumToolkit:
         if start_maximized:
             options.add_argument('--start-maximized')
         if window_size:
-            options.add_argument(f'window-size={window_size[0]}x{window_size[1]}')
+            options.add_argument(f'--window-size={window_size[0]}x{window_size[1]}')
         if ignore_certificate_errors:
             options.add_argument("--ignore-certificate-errors")
         if ignore_ssl_errors:
@@ -73,9 +259,20 @@ class SeleniumToolkit:
         if hide_scrollbars:
             options.add_argument('--hide-scrollbars')
         if disable_images:
-            options.add_argument('blink-settings=imagesEnabled=false')
+            options.add_argument('--blink-settings=imagesEnabled=false')
         return options
 
+class SeleniumToolkit:
+    """Selenium工具类, 用于封装selenium。使用该类, 请运行如下命令安装所需库存:
+    \npip install selenium
+    \npip install ddddocr
+    \npip install requests
+    \n请注意, selenium版本>=4.18
+    """
+    driver = None
+    by = By
+    keys = Keys
+    
     def __init__(self, driver_type: str="chrome", remote_url: str=None, options=None):
         """初始化selenium driver
 
