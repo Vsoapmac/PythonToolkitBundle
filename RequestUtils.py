@@ -1,7 +1,7 @@
 """request工具类 RequestUtils, 若使用请执行如下命令安装第三方库: \n
-\npip install requests (python3自带, 无需手动安装)
+\npip install requests
 \npip install beautifulsoup4
-\npip install lxml (安装beautifulsoup4时可能会连带安装该库)
+\npip install lxml
 """
 import requests, json, lxml, lxml.html
 from bs4 import BeautifulSoup, Tag
