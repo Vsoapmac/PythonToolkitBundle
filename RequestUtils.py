@@ -73,12 +73,12 @@ def get_response_detail(url_or_response: str|requests.Response, request_method: 
         "text": response.text
     }
 
-def get_html(url: str, request_method: str="get", response_encoding: str="UTF-8", 
+def get_html(url_or_response: str|requests.Response, request_method: str="get", response_encoding: str="UTF-8", 
              data: dict=None, params: dict=None, headers: dict=None, cookies: dict=None, timeout: int=60) -> str:
     """获取html文本
 
     Args:
-        url (str): 请求的url地址
+        url_or_response (str): 请求的url地址或requests.Response对象
         request_method (str, optional): 请求方法, 分别有 get|post|put|delete|head. Defaults to "get".
         response_encoding (str, optional): 响应编码. Defaults to "UTF-8".
         data (dict, optional): 请求体, 使用get请求时通常可以忽略. Defaults to None.
@@ -90,16 +90,19 @@ def get_html(url: str, request_method: str="get", response_encoding: str="UTF-8"
     Returns:
         str: html文本内容
     """
-    if request_method == "get":
-        response = requests.get(url, data=data, params=params, headers=headers, cookies=cookies, timeout=timeout)
-    elif request_method == "post":
-        response = requests.post(url, data=data, params=params, headers=headers, cookies=cookies, timeout=timeout)
-    elif request_method == "put":
-        response = requests.put(url, data=data, params=params, headers=headers, cookies=cookies, timeout=timeout)
-    elif request_method == "delete":
-        response = requests.delete(url, data=data, params=params, headers=headers, cookies=cookies, timeout=timeout)
-    elif request_method == "head":
-        response = requests.head(url, data=data, params=params, headers=headers, cookies=cookies, timeout=timeout)
+    if isinstance(url_or_response, str):
+        if request_method == "get":
+            response = requests.get(url_or_response, data=data, params=params, headers=headers, cookies=cookies, timeout=timeout)
+        elif request_method == "post":
+            response = requests.post(url_or_response, data=data, params=params, headers=headers, cookies=cookies, timeout=timeout)
+        elif request_method == "put":
+            response = requests.put(url_or_response, data=data, params=params, headers=headers, cookies=cookies, timeout=timeout)
+        elif request_method == "delete":
+            response = requests.delete(url_or_response, data=data, params=params, headers=headers, cookies=cookies, timeout=timeout)
+        elif request_method == "head":
+            response = requests.head(url_or_response, data=data, params=params, headers=headers, cookies=cookies, timeout=timeout)
+    else:
+        response = url_or_response
     response.encoding = response_encoding
     return response.text
 
