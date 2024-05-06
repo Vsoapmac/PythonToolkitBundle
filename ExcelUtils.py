@@ -54,6 +54,13 @@ class OpenpyxlAdapter:
 
     def close(self):
         """关闭引擎"""
+        self.book = None
+        self.sheet = None
+        self.excel_path = None
+        self.sheet_name = None
+    
+    def quit(self):
+        """完全退出引擎, 会先保存表格后退出"""
         self.book.save(self.excel_path)
         self.book = None
         self.sheet = None
@@ -365,6 +372,13 @@ class XlutilsAdapter:
         self.excel_path = None
         self.sheet_name = None
     
+    def quit(self):
+        """完全退出引擎, 会先保存表格后退出"""
+        self.book = None
+        self.sheet = None
+        self.excel_path = None
+        self.sheet_name = None
+    
     def get_value(self, column: str, row: int):
         """获取单元格数据
 
@@ -526,12 +540,23 @@ class XlwingsAdapter:
         self.sheet = sheet
         self.excel_path = excel_path
         self.sheet_name = sheet_name
-            
+    
     def close(self):
         """关闭引擎"""
+        self.book.close()
+        self.app.quit()
+        self.app = None
+        self.book = None
+        self.sheet = None
+        self.excel_path = None
+        self.sheet_name = None
+    
+    def quit(self):
+        """完全退出引擎, 会先保存表格后退出"""
         self.book.save()
         self.book.close()
         self.app.quit()
+        self.app = None
         self.book = None
         self.sheet = None
         self.excel_path = None
@@ -904,5 +929,5 @@ class ExcelUtils:
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         if self.engine:
-            self.engine.close()
+            self.engine.quit()
             self.engine = None
