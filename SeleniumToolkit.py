@@ -2,7 +2,7 @@ import requests, os
 from selenium import webdriver
 from ddddocr import DdddOcr
 from selenium.webdriver import ActionChains
-from selenium.webdriver.common.by import By
+from selenium.webdriver.common.by import By # 用于给其他模块导入By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import Select
 from selenium.webdriver.support.wait import WebDriverWait
@@ -268,9 +268,9 @@ class SeleniumToolkit:
     \npip install ddddocr
     \npip install requests
     \n请注意, selenium版本>=4.18
+    \n使用By时, 请使用from package.SeleniumToolkit import By
     """
     driver = None
-    by = By
     keys = Keys
     
     def __init__(self, driver_type: str="chrome", remote_url: str=None, options=None):
@@ -314,7 +314,7 @@ class SeleniumToolkit:
         Example:
             >>> driver = SeleniumToolkit()
             >>> driver.start_web("web-site-url")
-            >>> driver.start_web("web-site-url", (driver.by.ID, "ID"))
+            >>> driver.start_web("web-site-url", (By.ID, "ID"))
         """
         self.driver.get(url)
         if wait_element_locator:
@@ -441,12 +441,12 @@ class SeleniumToolkit:
         Example:
             >>> driver = SeleniumToolkit()
             >>> driver.start_web("web-site-url")
-            >>> driver.click(driver.by.XPATH, "XPATH")
-            >>> ele = driver.find_element(driver.by.XPATH, "XPATH")
+            >>> driver.click(By.XPATH, "XPATH")
+            >>> ele = driver.find_element(By.XPATH, "XPATH")
             >>> driver.click(element=ele, timeout=100)
             >>> driver.close()
         """
-        element.click() if element else WebDriverWait(self.driver, timeout).until(EC.presence_of_element_located((by, value))).click()
+        WebDriverWait(self.driver, timeout).until(EC.presence_of_element_located((by, value))).click() if element is not None else element.click()
     
     def select_combobox(self, select_type: str="index", by: str=None, value: str=None, element: WebElement=None, select_value: int | str=0, timeout: int=60):
         """选择<select></select>标签的选项
@@ -579,9 +579,9 @@ class SeleniumToolkit:
         Example:
             >>> driver = SeleniumToolkit()
             >>> driver.start_web("web-site-url")
-            >>> driver.send_text(driver.by.XPATH, "INPUT_XPATH", text_value="hello world") # 发送文本
-            >>> driver.send_text(driver.by.XPATH, "INPUT_FILE_XPATH", text_value="./test.txt") # 发送文件
-            >>> ele = driver.find_element(driver.by.XPATH, "INPUT_XPATH")
+            >>> driver.send_text(By.XPATH, "INPUT_XPATH", text_value="hello world") # 发送文本
+            >>> driver.send_text(By.XPATH, "INPUT_FILE_XPATH", text_value="./test.txt") # 发送文件
+            >>> ele = driver.find_element(By.XPATH, "INPUT_XPATH")
             >>> driver.send_text(element=ele, text_value="hello world", timeout=100)
             >>> driver.close()
         """
@@ -622,9 +622,9 @@ class SeleniumToolkit:
         Example:
             >>> driver = SeleniumToolkit()
             >>> driver.start_web("web-site-url")
-            >>> driver.type_keys(driver.keys.ENTER, by=driver.by.XPATH, value="INPUT_XPATH") # 输入Enter
-            >>> driver.type_keys(driver.keys.CONTROL, "a", by=driver.by.XPATH, value="INPUT_XPATH") # 输入Ctrl+a
-            >>> ele = driver.find_element(driver.by.XPATH, "INPUT_XPATH")
+            >>> driver.type_keys(driver.keys.ENTER, by=By.XPATH, value="INPUT_XPATH") # 输入Enter
+            >>> driver.type_keys(driver.keys.CONTROL, "a", by=By.XPATH, value="INPUT_XPATH") # 输入Ctrl+a
+            >>> ele = driver.find_element(By.XPATH, "INPUT_XPATH")
             >>> driver.type_keys(driver.keys.ENTER, element=ele, timeout=100)
             >>> driver.close()
         """
