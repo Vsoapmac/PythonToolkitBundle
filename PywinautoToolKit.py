@@ -1,5 +1,8 @@
-from pywinauto.application import Application, WindowSpecification
+import win32api, win32con
+from pynput.mouse import Button, Controller
 from pywinauto import mouse, keyboard
+from pywinauto.application import Application, WindowSpecification
+
 
 class Keys:
     ENTER = "{ENTER}"
@@ -31,11 +34,14 @@ class PywinautoToolKit:
     """pywinauto工具类, 适用于windows的app, 控件和窗口在该处的概念都为windows
     \n若使用该工具类, 请使用如下命令安装第三方库:
     \npip install pywinauto
+    \npip install pynput
     """
     app = None
+    _mouse_button_map = {"left": Button.left, "right": Button.right, "middle": Button.middle}
     key = Keys
     
     def __init__(self, app_path: str=None, backend: str="win32"):
+        self.mouse_controller = Controller()
         if app_path:
             self.app = Application(backend).start(app_path)
     
@@ -72,6 +78,14 @@ class PywinautoToolKit:
     def close(self):
         """关闭整个app"""
         self.app.kill()
+    
+    def get_screen_size(self) -> tuple:
+        """获取当前屏幕大小
+
+        Returns:
+            tuple: (width, height)
+        """
+        return win32api.GetSystemMetrics(win32con.SM_CXSCREEN), win32api.GetSystemMetrics(win32con.SM_CYSCREEN)
     
     def find_window(self, window_title: str, timeout: int=60, wait_for: str="enabled", retry_interval: float=0.5) -> WindowSpecification:
         """查找窗口
@@ -435,7 +449,7 @@ class PywinautoToolKit:
         element.double_click_input()
         
     def send_text(self, window_title: str=None, element_title: str=None, element_auto_id: str=None, 
-              element: WindowSpecification=None, value: int|str|any="", timeout: int=60, wait_for: str="enabled", retry_interval: float=0.5):
+              element: WindowSpecification=None, value: int|str="", timeout: int=60, wait_for: str="enabled", retry_interval: float=0.5):
         """发送文本
 
         Args:
@@ -499,46 +513,67 @@ class PywinautoToolKit:
                 element = self.app[window_title].window(auto_id=element_auto_id)
             element.wait(wait_for=wait_for, timeout=timeout, retry_interval=retry_interval)
         element.select(option_value)
-        
-    def mouse_click(self, coords: tuple=None):
+    
+    def mouse_click(self, button: str='left', coords: tuple=None, count: int=1):
         """使用鼠标点击
 
         Args:
+            button (str, optional): 鼠标按键, 可以是'left', 'right', 'middle'. Defaults to 'left'.
             coords (tuple, optional): 坐标, 会将鼠标移动到该坐标进行操作, 如果为None则会在当前鼠标位置进行操作. Defaults to None.
+            count (int, optional): 点击次数.只有coords为None才生效. Defaults to 1.
         """
-        mouse.click(coords=coords)
+        if coords == None:
+            self.mouse_controller.click(button=self._mouse_button_map[button], count=count)
+        else:
+            mouse.click(button=button, coords=coords)
         
-    def mouse_double_click(self, coords: tuple=None):
+    def mouse_double_click(self, button: str = 'left', coords: tuple=None):
         """使用鼠标双击
 
         Args:
+            button (str, optional): 鼠标按键, 可以是'left', 'right', 'middle'. Defaults to 'left'.
             coords (tuple, optional): 坐标, 会将鼠标移动到该坐标进行操作, 如果为None则会在当前鼠标位置进行操作. Defaults to None.
         """
-        mouse.double_click(coords=coords)
+        if coords == None:
+            self.mouse_controller.click(button=self._mouse_button_map[button], clicks=2)
+        else:
+            mouse.double_click(button=button, coords=coords)
         
-    def mouse_right_click(self, coords: tuple=None):
+    def mouse_right_click(self, coords: tuple=None, count: int=1):
         """使用鼠标右击
 
         Args:
             coords (tuple, optional): 坐标, 会将鼠标移动到该坐标进行操作, 如果为None则会在当前鼠标位置进行操作. Defaults to None.
+            count (int, optional): 点击次数.只有coords为None才生效. Defaults to 1.
         """
-        mouse.right_click(coords=coords)
+        if coords == None:
+            self.mouse_controller.click(button=Button.right, count=count)
+        else:
+            mouse.right_click(coords=coords)
         
-    def mouse_press(self, coords: tuple=None):
+    def mouse_press(self, button: str = 'left', coords: tuple=None):
         """使用鼠标长按, 注意该方法会让鼠标一直按下去
 
         Args:
+            button (str, optional): 鼠标按键, 可以是'left', 'right', 'middle'. Defaults to 'left'.
             coords (tuple, optional): 坐标, 会将鼠标移动到该坐标进行操作, 如果为None则会在当前鼠标位置进行操作. Defaults to None.
         """
-        mouse.press(coords=coords)
+        if coords == None:
+            self.mouse_controller.press(button=self._mouse_button_map[button])
+        else:
+            mouse.press(button=button, coords=coords)
         
-    def mouse_release(self, coords: tuple=None):
+    def mouse_release(self, button: str = 'left', coords: tuple=None):
         """释放鼠标, 一般与press结合
 
         Args:
+            button (str, optional): 鼠标按键, 可以是'left', 'right', 'middle'. Defaults to 'left'.
             coords (tuple, optional): 坐标, 会将鼠标移动到该坐标进行操作, 如果为None则会在当前鼠标位置进行操作. Defaults to None.
         """
-        mouse.release(coords=coords)
+        if coords == None:
+            self.mouse_controller.release(button=self._mouse_button_map[button])
+        else:
+            mouse.release(button=button, coords=coords)
         
     def mouse_scroll(self, coords: tuple=None, wheel_dist: int=1):
         """鼠标滚动
@@ -547,7 +582,7 @@ class PywinautoToolKit:
             coords (tuple, optional): 坐标, 会将鼠标移动到该坐标进行操作, 如果为None则会在当前鼠标位置进行操作. Defaults to None.
             wheel_dist (int, optional): 滚轮滚动的量或距离, 以滚轮“点击”或“刻度”为单位. Defaults to 1.
         """
-        mouse.scroll(coords=coords, wheel_dist=wheel_dist)
+        ...
         
     def keybord_send_keys(self, keys: str):
         """模拟键盘按键
