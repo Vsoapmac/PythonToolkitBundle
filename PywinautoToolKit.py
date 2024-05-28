@@ -575,14 +575,17 @@ class PywinautoToolKit:
         else:
             mouse.release(button=button, coords=coords)
         
-    def mouse_scroll(self, coords: tuple=None, wheel_dist: int=1):
+    def mouse_scroll(self, coords: tuple=None, wheel: int=1):
         """鼠标滚动
 
         Args:
             coords (tuple, optional): 坐标, 会将鼠标移动到该坐标进行操作, 如果为None则会在当前鼠标位置进行操作. Defaults to None.
-            wheel_dist (int, optional): 滚轮滚动的量或距离, 以滚轮“点击”或“刻度”为单位. Defaults to 1.
+            wheel (int, optional): 向上滑动(数字>0)或向下滑动(数字<0). Defaults to 1.
         """
-        ...
+        if coords == None:
+            self.mouse_controller.scroll(0, wheel)
+        else:
+            mouse.scroll(coords=coords, wheel_dist=wheel)
         
     def keybord_send_keys(self, keys: str):
         """模拟键盘按键
