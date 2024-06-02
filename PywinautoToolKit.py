@@ -1,10 +1,36 @@
 import win32api, win32con
-from pynput.mouse import Button, Controller
+from pynput.mouse import Button, Controller as MouseController
+from pynput.keyboard import Key, Controller as KeyboardController
 from pywinauto import mouse, keyboard
 from pywinauto.application import Application, WindowSpecification
 
 
-class Keys:
+class PynputKeys:
+    orighin_key_object = Key
+    ENTER = Key.enter
+    SHIFT = Key.shift
+    CTRL = Key.ctrl
+    ALT = Key.alt
+    SPACE = Key.space
+    BACKSPACE = Key.backspace
+    CAPSLOCK = Key.caps_lock
+    DELETE = Key.delete
+    DOWN_ARROW = Key.down
+    UP_ARROW = Key.up
+    LEFT_ARROW = Key.left
+    RIGHT_ARROW = Key.right
+    END = Key.end
+    ESC = Key.esc
+    HOME = Key.home
+    INSERT = Key.insert
+    NUMLOCK = Key.num_lock
+    PAGEDOWN = Key.page_down
+    PAGEUP = Key.page_up
+    PRINTSCREEN = Key.print_screen
+    SCROLLLOCK = Key.scroll_lock
+    TAB = Key.tab
+
+class PywinKeys:
     ENTER = "{ENTER}"
     SHIFT = "+"
     CTRL = "^"
@@ -38,10 +64,10 @@ class PywinautoToolKit:
     """
     app = None
     _mouse_button_map = {"left": Button.left, "right": Button.right, "middle": Button.middle}
-    key = Keys
     
     def __init__(self, app_path: str=None, backend: str="win32"):
-        self.mouse_controller = Controller()
+        self.mouse_controller = MouseController()
+        self.keyboard_controller = KeyboardController()
         if app_path:
             self.app = Application(backend).start(app_path)
     
