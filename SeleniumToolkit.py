@@ -273,17 +273,20 @@ class SeleniumToolkit:
     driver = None
     keys = Keys
     
-    def __init__(self, driver_type: str="chrome", remote_url: str=None, options=None):
+    def __init__(self, driver_type: str="chrome", remote_url: str=None, 
+                 options: webdriver.ChromeOptions|ChromeOptionsSetter|EdgeOptionsSetter=None):
         """初始化selenium driver
 
         Args:
             driver_type (str, optional): driver类型, 选项有:chrome|edge|firefox|remote. Defaults to "chrome".
             remote_url (str, optional): 远程selenium的url. Defaults to None.
-            options (_type_, optional): selenium的启动参数. Defaults to None.
+            options (webdriver.ChromeOptions | ChromeOptionsSetter | EdgeOptionsSetter, optional): selenium的启动参数, 可以是该模块的对象或者自己导入webdriver的options设置参数. Defaults to None.
 
         Raises:
             Exception: 没有对应的driver type
         """
+        if isinstance(options, ChromeOptionsSetter) or isinstance(options, EdgeOptionsSetter):
+            options = options.get_options()
         if driver_type == "chrome":
             self.driver = webdriver.Chrome(options)
         elif driver_type == "edge":
