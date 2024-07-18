@@ -7,8 +7,8 @@ import requests, json, lxml, lxml.html
 from bs4 import BeautifulSoup, Tag
 
 
-def request(url: str, request_method: str="get", data: dict=None, params: dict=None, 
-            headers: dict=None, cookies: dict=None, timeout: int=60) -> requests.Response:
+def request(url: str, request_method: str="get", data: dict=None, params: dict=None, json: dict=None,
+            headers: dict=None, cookies: dict=None, timeout: int=60, **request_args) -> requests.Response:
     """发送请求并返回响应对象
 
     Args:
@@ -16,6 +16,7 @@ def request(url: str, request_method: str="get", data: dict=None, params: dict=N
         request_method (str, optional): 请求方法, 分别有 get|post|put|delete|head. Defaults to "get".
         data (dict, optional): 请求体, 使用get请求时通常可以忽略. Defaults to None.
         params (dict, optional): url参数, 这将在url中体现. Defaults to None.
+        json (dict, optional): 要发送的json参数. Defaults to None.
         headers (dict, optional): 请求头. Defaults to None.
         cookies (dict, optional): 要发送的Cookie. Defaults to None.
         timeout (int, optional): 请求的超时时间. Defaults to 60.
@@ -24,18 +25,18 @@ def request(url: str, request_method: str="get", data: dict=None, params: dict=N
         requests.Response: 响应对象
     """
     if request_method == "get":
-        return requests.get(url, params=params, headers=headers, cookies=cookies, timeout=timeout)
+        return requests.get(url, params=params, json=json, headers=headers, cookies=cookies, timeout=timeout, **request_args)
     elif request_method == "post":
-        return requests.post(url, data=data, headers=headers, cookies=cookies, timeout=timeout)
+        return requests.post(url, data=data, json=json, headers=headers, cookies=cookies, timeout=timeout, **request_args)
     elif request_method == "put":
-        return requests.put(url, data=data, headers=headers, cookies=cookies, timeout=timeout)
+        return requests.put(url, data=data, json=json, headers=headers, cookies=cookies, timeout=timeout, **request_args)
     elif request_method == "delete":
-        return requests.delete(url, data=data, headers=headers, cookies=cookies, timeout=timeout)
+        return requests.delete(url, data=data, json=json, headers=headers, cookies=cookies, timeout=timeout, **request_args)
     elif request_method == "head":
-        return requests.head(url, headers=headers, cookies=cookies, timeout=timeout)
+        return requests.head(url, headers=headers, json=json, cookies=cookies, timeout=timeout, **request_args)
 
-def get_response_detail(url_or_response: str|requests.Response, request_method: str="get", data: dict=None, 
-                        params: dict=None, headers: dict=None, cookies: dict=None, timeout: int=60) -> dict:
+def get_response_detail(url_or_response: str|requests.Response, request_method: str="get", data: dict=None, params: dict=None, 
+                        json: dict=None, headers: dict=None, cookies: dict=None, timeout: int=60, **request_args) -> dict:
     """获取响应的详细信息
 
     Args:
@@ -43,6 +44,7 @@ def get_response_detail(url_or_response: str|requests.Response, request_method: 
         request_method (str, optional): 请求方法, 分别有 get|post|put|delete|head. Defaults to "get".
         data (dict, optional): 请求体, 使用get请求时通常可以忽略. Defaults to None.
         params (dict, optional): url参数, 这将在url中体现. Defaults to None.
+        json (dict, optional): 要发送的json参数. Defaults to None.
         headers (dict, optional): 请求头. Defaults to None.
         cookies (dict, optional): 要发送的Cookie. Defaults to None.
         timeout (int, optional): 请求的超时时间. Defaults to 60.
@@ -52,15 +54,15 @@ def get_response_detail(url_or_response: str|requests.Response, request_method: 
     """
     if isinstance(url_or_response, str):
         if request_method == "get":
-            response = requests.get(url_or_response, data=data, params=params, headers=headers, cookies=cookies, timeout=timeout)
+            return requests.get(url_or_response, params=params, json=json, headers=headers, cookies=cookies, timeout=timeout, **request_args)
         elif request_method == "post":
-            response = requests.post(url_or_response, data=data, params=params, headers=headers, cookies=cookies, timeout=timeout)
+            return requests.post(url_or_response, data=data, json=json, headers=headers, cookies=cookies, timeout=timeout, **request_args)
         elif request_method == "put":
-            response = requests.put(url_or_response, data=data, params=params, headers=headers, cookies=cookies, timeout=timeout)
+            return requests.put(url_or_response, data=data, json=json, headers=headers, cookies=cookies, timeout=timeout, **request_args)
         elif request_method == "delete":
-            response = requests.delete(url_or_response, data=data, params=params, headers=headers, cookies=cookies, timeout=timeout)
+            return requests.delete(url_or_response, data=data, json=json, headers=headers, cookies=cookies, timeout=timeout, **request_args)
         elif request_method == "head":
-            response = requests.head(url_or_response, data=data, params=params, headers=headers, cookies=cookies, timeout=timeout)
+            return requests.head(url_or_response, headers=headers, json=json, cookies=cookies, timeout=timeout, **request_args)
     elif isinstance(url_or_response, requests.Response):
         response = url_or_response
     return {
@@ -74,7 +76,8 @@ def get_response_detail(url_or_response: str|requests.Response, request_method: 
     }
 
 def get_html(url_or_response: str|requests.Response, request_method: str="get", response_encoding: str="UTF-8", 
-             data: dict=None, params: dict=None, headers: dict=None, cookies: dict=None, timeout: int=60) -> str:
+             data: dict=None, params: dict=None, json: dict=None, headers: dict=None, 
+             cookies: dict=None, timeout: int=60, **request_args) -> str:
     """获取html文本
 
     Args:
@@ -83,6 +86,7 @@ def get_html(url_or_response: str|requests.Response, request_method: str="get", 
         response_encoding (str, optional): 响应编码. Defaults to "UTF-8".
         data (dict, optional): 请求体, 使用get请求时通常可以忽略. Defaults to None.
         params (dict, optional): url参数, 这将在url中体现. Defaults to None.
+        json (dict, optional): 要发送的json参数. Defaults to None.
         headers (dict, optional): 请求头. Defaults to None.
         cookies (dict, optional): 要发送的Cookie. Defaults to None.
         timeout (int, optional): 请求的超时时间. Defaults to 60.
@@ -92,15 +96,15 @@ def get_html(url_or_response: str|requests.Response, request_method: str="get", 
     """
     if isinstance(url_or_response, str):
         if request_method == "get":
-            response = requests.get(url_or_response, data=data, params=params, headers=headers, cookies=cookies, timeout=timeout)
+            return requests.get(url_or_response, params=params, json=json, headers=headers, cookies=cookies, timeout=timeout, **request_args)
         elif request_method == "post":
-            response = requests.post(url_or_response, data=data, params=params, headers=headers, cookies=cookies, timeout=timeout)
+            return requests.post(url_or_response, data=data, json=json, headers=headers, cookies=cookies, timeout=timeout, **request_args)
         elif request_method == "put":
-            response = requests.put(url_or_response, data=data, params=params, headers=headers, cookies=cookies, timeout=timeout)
+            return requests.put(url_or_response, data=data, json=json, headers=headers, cookies=cookies, timeout=timeout, **request_args)
         elif request_method == "delete":
-            response = requests.delete(url_or_response, data=data, params=params, headers=headers, cookies=cookies, timeout=timeout)
+            return requests.delete(url_or_response, data=data, json=json, headers=headers, cookies=cookies, timeout=timeout, **request_args)
         elif request_method == "head":
-            response = requests.head(url_or_response, data=data, params=params, headers=headers, cookies=cookies, timeout=timeout)
+            return requests.head(url_or_response, headers=headers, json=json, cookies=cookies, timeout=timeout, **request_args)
     else:
         response = url_or_response
     response.encoding = response_encoding
