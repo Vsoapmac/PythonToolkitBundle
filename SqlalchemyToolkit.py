@@ -77,7 +77,7 @@ class SqlalchemyToolkit:
     
     def create_sql_server_engine(self, username: str, password: str, database_name: str, host: str="localhost", port: int=1433, 
                                  connect_url_parm: str="?driver=ODBC+Driver+17+for+SQL+Server", echo: bool=True, pool_size: int=20) -> Engine:
-        """创建oracle引擎, 使用前应该执行如下命令安装数据库驱动: 
+        """创建sql server引擎, 使用前应该执行如下命令安装数据库驱动: 
         \npip install pyodbc
 
         Args:
