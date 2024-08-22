@@ -121,6 +121,30 @@ def get_file_md5(file_path: str) -> str:
     md5_value = md5_hash.hexdigest()
     return md5_value
 
+def get_file_size(file_path: str | Path, file_size_type: str="KB", ndigits: int=2) -> float:
+    """获取文件大小
+
+    Args:
+        file_path (str | Path): 文件路径
+        file_size_type (str, optional): 文件大小单位, 可输入有: B|KB|MB|GB|TB. Defaults to "KB".
+        ndigits (int, optional): 输出保留多少位. Defaults to 2.
+
+    Returns:
+        float: 文件大小
+    """
+    file = Path(file_path).resolve() if isinstance(file_path, str) else file_path.resolve()
+    file_size = os.path.getsize(file)
+    if file_size_type == "KB":
+        return round(file_size / 1024, ndigits)
+    elif file_size_type == "MB":
+        return round(file_size / 1024 / 1024, ndigits)
+    elif file_size_type == "GB":
+        return round(file_size / 1024 / 1024 / 1024, ndigits)
+    elif file_size_type == "TB":
+        return round(file_size / 1024 / 1024 / 1024 / 1024, ndigits)
+    else:
+        return round(file_size, ndigits)
+
 def get_file_info(file_path: str | Path, beatiful_print=False) -> dict:
     """获取文件完整信息
 
