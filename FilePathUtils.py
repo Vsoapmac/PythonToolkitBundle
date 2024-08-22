@@ -135,7 +135,7 @@ def get_file_info(file_path: str | Path, beatiful_print=False) -> dict:
         - "full_name"：文件完整名(包含后缀)
         - "name"：文件名(不包含后缀)
         - "suffix"：文件后缀(.xx格式)
-        - "size"：文件大小, 单位MB
+        - "size"：文件大小, 单位KB
         - "last_modify_day"：文件最新修改日期, 格式YYYY-MM-DD HH:MM:SS
         - "root"：文件根目录
         - "path_symbol"：文件目录符
@@ -143,7 +143,7 @@ def get_file_info(file_path: str | Path, beatiful_print=False) -> dict:
         - "parents"：文件父目录集
         - "system"：文件所在系统类型
     """
-    file = Path(file_path).resolve()
+    file = Path(file_path).resolve() if isinstance(file_path, str) else file_path.resolve()
     parent_path_list = []
     for parent_path in file.parents:
         parent_path_list.append(str(parent_path))
@@ -225,7 +225,7 @@ def read_file(file_path: str | Path, encoding="UTF-8") -> str:
     Returns:
         str: 文件内容
     """
-    path = Path(file_path)
+    path = Path(file_path) if isinstance(file_path, str) else file_path
     if path.exists():
         with path.open(encoding=encoding) as file:
             if file.readable():
@@ -244,7 +244,7 @@ def write_file(file_path: str | Path, content, encoding="UTF-8"):
     Raises:
         Exception: 文件不可写则抛出异常
     """
-    path = Path(file_path)
+    path = Path(file_path) if isinstance(file_path, str) else file_path
     with path.open(mode="w", encoding=encoding) as file:
         if file.writable():
             file.write(content)
@@ -261,7 +261,7 @@ def rename_file(old_file_path: str | Path, new_file_name: str) -> Path:
     Returns:
         Path: 新的文件名绝对路径
     """
-    old_file_path = Path(old_file_path).resolve()
+    old_file_path = Path(old_file_path).resolve() if isinstance(old_file_path, str) else old_file_path.resolve()
     path = old_file_path.parent
     return old_file_path.rename(path / new_file_name)
 
@@ -275,7 +275,7 @@ def copy_single_file(from_file_path: str | Path, to_file_folder: str | Path):
     Raises:
         Exception: 源文件不存在则抛出异常
     """
-    from_file_path = Path(from_file_path).resolve()
+    from_file_path = Path(from_file_path).resolve() if isinstance(from_file_path, str) else from_file_path.resolve()
     to_file_path = Path(to_file_folder, from_file_path.name).resolve()
     if from_file_path.exists():
         shutil.copy(from_file_path, to_file_path)
@@ -318,7 +318,7 @@ def move_single_file(from_file_path: str | Path, to_file_folder: str | Path):
     Raises:
         Exception: 源文件不存在则抛出异常
     """
-    from_file_path = Path(from_file_path).resolve()
+    from_file_path = Path(from_file_path).resolve() if isinstance(from_file_path, str) else from_file_path.resolve()
     to_file_path = Path(to_file_folder, from_file_path.name).resolve()
     if from_file_path.exists():
         shutil.move(from_file_path, to_file_path)
