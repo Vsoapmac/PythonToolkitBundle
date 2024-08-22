@@ -68,8 +68,7 @@ def get_project_folder_path(project_name: str = '', file_level: int = -1) -> Pat
 
     Args:
         project_name (str, optional): 项目名称. Defaults to ''.
-        file_level (int, optional): 文件在当前项目的哪一层, 在当前文件夹下为0, 在项目子文件夹下为1, 在项目子文件夹下的子文件夹为2, 以此类推。
-        当file_level > 0时, 形参project_name就不会起作用了, 只有file_level=-1时才会起作用。默认为-1. Defaults to -1.
+        file_level (int, optional): 文件在当前项目的哪一层, 在当前文件夹下为0, 在项目子文件夹下为1, 在项目子文件夹下的子文件夹为2, 以此类推。当file_level > 0时, 形参project_name就不会起作用了, 只有file_level=-1时才会起作用. Defaults to -1.
 
     Raises:
         Exception: 路径不存在则抛出异常
@@ -238,7 +237,7 @@ def write_file(file_path: str | Path, content, encoding="UTF-8"):
 
     Args:
         file_path (str | Path): 文件路径
-        content (_type_): 写入的内容
+        content (any): 写入的内容
         encoding (str, optional): 文件编码. Defaults to "UTF-8".
 
     Raises:
