@@ -911,23 +911,26 @@ class ExcelUtils:
         if engine == "openpyxl":
             book = load_workbook(excel_path)
             sheet = book[sheet_name]
-            self.engine = OpenpyxlAdapter(book, sheet, excel_path, sheet_name)
+            self.__engine = OpenpyxlAdapter(book, sheet, excel_path, sheet_name)
         elif engine == "xlutils":
             book = open_workbook(excel_path)
             sheet = book.sheet_by_name(sheet_name)
-            self.engine = XlutilsAdapter(book, sheet, excel_path, sheet_name)
+            self.__engine = XlutilsAdapter(book, sheet, excel_path, sheet_name)
         elif engine == "xlwings":
             app = xw.App(visible=visible, add_book=False)
             book = app.books.open(excel_path)
             sheet = book.sheets[sheet_name]
-            self.engine = XlwingsAdapter(app, book, sheet, excel_path, sheet_name)
+            self.__engine = XlwingsAdapter(app, book, sheet, excel_path, sheet_name)
         else:
             raise ValueError(f"Unknow engine: {engine}, please select an engine in: {self.ENGINE_LIST}")
     
+    def get_engine(self):
+        return self.__engine
+
     def __enter__(self):
-        return self
+        return self.__engine
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        if self.engine:
-            self.engine.close()
-            self.engine = None
+        if self.__engine:
+            self.__engine.close()
+            self.__engine = None
