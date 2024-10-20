@@ -4,7 +4,7 @@
 import yaml
 
 
-def loadYamlFile(file_path: str, encoding: str = "UTF-8") -> dict:
+def load_yaml_file(file_path: str, encoding: str = "UTF-8") -> dict:
     """加载yaml文件
 
     Args:
@@ -18,7 +18,7 @@ def loadYamlFile(file_path: str, encoding: str = "UTF-8") -> dict:
         load_data = yaml.safe_load(f)
     return load_data
 
-def dumpDataToYaml(file_path: str, dict_data: dict, encoding: str="UTF-8"):
+def dump_data_to_yaml(file_path: str, dict_data: dict, encoding: str="UTF-8"):
     """将数据写入yaml文件
     !!!注意该方法会覆盖yaml中的全部数据, 任何注释将会全部消失!!!
 
@@ -31,7 +31,7 @@ def dumpDataToYaml(file_path: str, dict_data: dict, encoding: str="UTF-8"):
     with open(file_path, mode="w", encoding=encoding) as f:
         f.write(dump_data)
 
-def getValue(dict_data: dict, key):
+def get_value(dict_data: dict, key):
     """获取字典中的值
 
     Args:
