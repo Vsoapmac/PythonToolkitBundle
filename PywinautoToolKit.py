@@ -1,8 +1,15 @@
+"""windows工具类集合
+\n若使用该工具类, 请使用如下命令安装第三方库:
+\npip install pywinauto
+\npip install pynput
+\npip install pyautogui
+"""
 import win32api, win32con
 from pynput.mouse import Button, Controller as MouseController
 from pynput.keyboard import Key, Controller as KeyboardController
 from pywinauto import mouse, keyboard
 from pywinauto.application import Application, WindowSpecification
+import pyautogui as pg
 
 
 class PynputKeys:
@@ -56,6 +63,345 @@ class PywinKeys:
     TAB = "{TAB}"
     HELP = "{HELP}"
 
+class PyautoguiToolKit:
+    """pyautoGUI工具类
+    \n若使用该工具类, 请使用如下命令安装第三方库:
+    \npip install pyautogui
+    """
+    KEY_NAMES = [
+        "\t",
+        "\n",
+        "\r",
+        " ",
+        "!",
+        '"',
+        "#",
+        "$",
+        "%",
+        "&",
+        "'",
+        "(",
+        ")",
+        "*",
+        "+",
+        ",",
+        "-",
+        ".",
+        "/",
+        "0",
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9",
+        ":",
+        ";",
+        "<",
+        "=",
+        ">",
+        "?",
+        "@",
+        "[",
+        "\\",
+        "]",
+        "^",
+        "_",
+        "`",
+        "a",
+        "b",
+        "c",
+        "d",
+        "e",
+        "f",
+        "g",
+        "h",
+        "i",
+        "j",
+        "k",
+        "l",
+        "m",
+        "n",
+        "o",
+        "p",
+        "q",
+        "r",
+        "s",
+        "t",
+        "u",
+        "v",
+        "w",
+        "x",
+        "y",
+        "z",
+        "{",
+        "|",
+        "}",
+        "~",
+        "accept",
+        "add",
+        "alt",
+        "altleft",
+        "altright",
+        "apps",
+        "backspace",
+        "browserback",
+        "browserfavorites",
+        "browserforward",
+        "browserhome",
+        "browserrefresh",
+        "browsersearch",
+        "browserstop",
+        "capslock",
+        "clear",
+        "convert",
+        "ctrl",
+        "ctrlleft",
+        "ctrlright",
+        "decimal",
+        "del",
+        "delete",
+        "divide",
+        "down",
+        "end",
+        "enter",
+        "esc",
+        "escape",
+        "execute",
+        "f1",
+        "f10",
+        "f11",
+        "f12",
+        "f13",
+        "f14",
+        "f15",
+        "f16",
+        "f17",
+        "f18",
+        "f19",
+        "f2",
+        "f20",
+        "f21",
+        "f22",
+        "f23",
+        "f24",
+        "f3",
+        "f4",
+        "f5",
+        "f6",
+        "f7",
+        "f8",
+        "f9",
+        "final",
+        "fn",
+        "hanguel",
+        "hangul",
+        "hanja",
+        "help",
+        "home",
+        "insert",
+        "junja",
+        "kana",
+        "kanji",
+        "launchapp1",
+        "launchapp2",
+        "launchmail",
+        "launchmediaselect",
+        "left",
+        "modechange",
+        "multiply",
+        "nexttrack",
+        "nonconvert",
+        "num0",
+        "num1",
+        "num2",
+        "num3",
+        "num4",
+        "num5",
+        "num6",
+        "num7",
+        "num8",
+        "num9",
+        "numlock",
+        "pagedown",
+        "pageup",
+        "pause",
+        "pgdn",
+        "pgup",
+        "playpause",
+        "prevtrack",
+        "print",
+        "printscreen",
+        "prntscrn",
+        "prtsc",
+        "prtscr",
+        "return",
+        "right",
+        "scrolllock",
+        "select",
+        "separator",
+        "shift",
+        "shiftleft",
+        "shiftright",
+        "sleep",
+        "space",
+        "stop",
+        "subtract",
+        "tab",
+        "up",
+        "volumedown",
+        "volumemute",
+        "volumeup",
+        "win",
+        "winleft",
+        "winright",
+        "yen",
+        "command",
+        "option",
+        "optionleft",
+        "optionright",
+    ]
+    
+    def get_screen_size(self) -> tuple:
+        """获取当前屏幕大小
+
+        Returns:
+            tuple: (width, height)
+        """
+        width, height = pg.size()
+        return (width, height)
+    
+    def get_mouse_position(self) -> tuple:
+        """获取当前鼠标位置
+
+        Returns:
+            tuple: (x, y)
+        """
+        x, y = pg.position()
+        return (x, y)
+    
+    def move_to(self, x: int|float, y: int|float, duration: float=0, **args):
+        """将鼠标移动到某一个位置
+
+        Args:
+            x (int | float): x轴, 对应屏幕的位置
+            y (int | float): y轴, 对应屏幕的位置
+            duration (float, optional): 指定移动鼠标光标到指定坐标所需的时间。如果时间为0, 则鼠标光标会立刻移动到对应位置. Defaults to 0.
+        """
+        pg.moveTo(x, y, duration, **args)
+    
+    def click(self, x: int|float, y: int|float, click_times: int=1, interval:int=0, button: str="PRIMARY", **args):
+        """鼠标点击
+
+        Args:
+            x (int | float): x轴, 对应屏幕的位置
+            y (int | float): y轴, 对应屏幕的位置
+            click_times (int, optional): 点击的次数. Defaults to 1.
+            interval (int, optional): 每一次点击之间间隔的时间, 单位为秒. Defaults to 0.
+            button (str, optional): 在鼠标点击时, 使用鼠标上面的哪个按钮, 可选为{LEFT, MIDDLE, RIGHT, PRIMARY, SECONDARY}. Defaults to "PRIMARY".
+        """
+        pg.click(x, y, click_times, interval, button, **args)
+    
+    def drag_to(self, x: int|float|tuple, y: int|float, duration: float=0, button: str="PRIMARY", **args):
+        """鼠标拖拽
+
+        Args:
+            x (int | float | tuple): x轴, 对应屏幕的位置。也可以是向左(对于负值)或向右(对于正值)移动鼠标光标的位置。如果是一个元组, 则用于x和y坐标
+            y (int | float): y轴, 对应屏幕的位置。也可以是向上（对于负值）或向下（对于正值）移动鼠标光标的位置
+            duration (float, optional): 指定移动鼠标光标到指定坐标所需的时间。如果时间为0, 则鼠标光标会立刻移动到对应位置. Defaults to 0.
+            button (str, optional): 在鼠标点击时, 使用鼠标上面的哪个按钮, 可选为{LEFT, MIDDLE, RIGHT, PRIMARY, SECONDARY}. Defaults to "PRIMARY".
+        """
+        pg.dragTo(x, y, duration, button=button, **args)
+    
+    def scroll(self, scrolling_times: int, **args):
+        """操作鼠标滚轮
+
+        Args:
+            scrolling_times (int): 滚动多少次, 正数向上, 负数向下
+        """
+        pg.scroll(scrolling_times, **args)
+    
+    def type_keys(self, key: str, press_times: int=1, interval: int=0, **args):
+        """按下键盘上的按键
+
+        Args:
+            key (str): 按键代码, 详情请查看类变量KEY_NAMES
+            press_times (int, optional): 按下多少次. Defaults to 1.
+            interval (int, optional): 每一次按下按键的间隔时间, 单位为秒. Defaults to 0.
+        """
+        pg.press(key, press_times, interval, **args)
+    
+    def send_text(self, text: str|list[str], interval: int=0, **args):
+        """发送一连串的文本(不支持组合按键)
+
+        Args:
+            text (str | list[str]): 文本或者文本序列
+            interval (int, optional): 每一次按下按键的间隔时间, 单位为秒. Defaults to 0.
+        """
+        pg.typewrite(text, interval, **args)
+        
+    def hot_key(self, *keys, interval: float=0, **args):
+        """按下组合键
+
+        Args:
+            keys (str): 组合键代码, 详情请查看类变量KEY_NAMES
+            interval (int, optional): 每一次按下按键的间隔时间, 单位为秒. Defaults to 0.
+            
+        Example:
+            >>> hot_key("ctrl", "shift", "a")
+            >>> hot_key("ctrl", "a", interval=1)
+        """
+        pg.hotkey(*keys, interval=interval, **args)
+    
+    def screenshot(self, save_image_path: str, region: tuple=None):
+        """屏幕截图
+
+        Args:
+            save_image_path (str): 保存截图路径
+            region (tuple): 截图区域框, 输入为一个四元组, 格式为(x1, y1, x2, y2), (x1, y1)代表的是区域框的左上角, (x2, y2)代表的是区域框的右下角. Defaults to None.
+        """
+        img = pg.screenshot()
+        if region:
+            img = img.crop(region)
+        img.save(save_image_path)
+    
+    def locate_image_on_screen(self, image_path: str, grayscale: bool=False, region: tuple=None, confidence: float=0.8, **args) -> tuple:
+        """通过图像识别, 识别屏幕上对应图片的位置
+
+        Args:
+            image_path (str): 图像路径
+            grayscale (bool, optional): 是否使用灰度模式进行匹配, 如果设置为True, 则以灰度模式进行图像匹配, 这样可以提高匹配速度, 但可能稍微降低准确性. Defaults to False.
+            region (tuple, optional): 指定一个矩形区域，在该区域内搜索图像, 输入为一个四元组, 格式为(x1, y1, x2, y2), (x1, y1)代表的是区域框的左上角, (x2, y2)代表的是区域框的右下角. Defaults to None.
+            confidence (float, optional): 指定匹配时所需的置信度水平。取值范围是 0 到 1, 其中 1 表示完全匹配. Defaults to 0.8.
+
+        Returns:
+            tuple: 对应位置的中心点
+            
+        Raises:
+            pyautogui.ImageNotFoundException: 无法在屏幕找到对应图片位置
+        """
+        x, y = pg.locateCenterOnScreen(image_path, grayscale=grayscale, region=region, confidence=confidence, **args)
+        return (x, y)
+    
+    def click_by_image(self, image_path: str, grayscale: bool=False, region: tuple=None, confidence: float=0.8, 
+                       click_times: int=1, interval:int=0, button: str="PRIMARY", **args):
+        """通过图像识别点击对应位置
+
+        Args:
+            image_path (str): 图像路径
+            grayscale (bool, optional): 是否使用灰度模式进行匹配, 如果设置为True, 则以灰度模式进行图像匹配, 这样可以提高匹配速度, 但可能稍微降低准确性. Defaults to False.
+            region (tuple, optional): 指定一个矩形区域，在该区域内搜索图像, 输入为一个四元组, 格式为(x1, y1, x2, y2), (x1, y1)代表的是区域框的左上角, (x2, y2)代表的是区域框的右下角. Defaults to None.
+            confidence (float, optional): 指定匹配时所需的置信度水平。取值范围是 0 到 1, 其中 1 表示完全匹配. Defaults to 0.8.
+            click_times (int, optional): 点击的次数. Defaults to 1.
+            interval (int, optional): 每一次点击之间间隔的时间, 单位为秒. Defaults to 0.
+            button (str, optional): 在鼠标点击时, 使用鼠标上面的哪个按钮, 可选为{LEFT, MIDDLE, RIGHT, PRIMARY, SECONDARY}. Defaults to "PRIMARY".
+        """
+        x, y = pg.locateCenterOnScreen(image_path, grayscale=grayscale, region=region, confidence=confidence, **args)
+        pg.click(x, y, click_times, interval, button, **args)
+    
 class PywinautoToolKit:
     """pywinauto工具类, 适用于windows的app, 控件和窗口在该处的概念都为windows
     \n若使用该工具类, 请使用如下命令安装第三方库:
