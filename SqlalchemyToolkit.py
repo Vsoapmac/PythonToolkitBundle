@@ -12,6 +12,87 @@ class Template_bean(declarative_base()):
     email = Column(String(120), unique=True)
 
 
+def create_mysql_engine(username: str, password: str, database_name: str, host: str="localhost", port: int=3306, 
+                        connect_url_parm: str="?charset=utf8", echo: bool=True, pool_size: int=20) -> Engine:
+    """创建mysql引擎, 使用前应该执行如下命令安装数据库驱动: 
+    \npip install pymysql
+    
+    Args:
+        username (str): 数据库用户名
+        password (str): 数据库密码
+        database_name (str): 数据库名
+        host (str, optional): 数据库host. Defaults to "localhost".
+        port (int, optional): 数据库端口号. Defaults to 3306.
+        connect_url_parm (str, optional): 连接参数, 注意第一个字符应该为?. Defaults to "?charset=utf8".
+        echo (bool, optional): 系统打印所生成的SQL. Defaults to True.
+        pool_size (int, optional): 连接池中保持的连接数. Defaults to 20.
+
+    Returns:
+        Engine: 数据库引擎
+    """
+    return create_engine(f"mysql+pymysql://{username}:{password}@{host}:{port}/{database_name}{connect_url_parm}", echo=echo, pool_size=pool_size)
+
+def create_postgresql_engine(username: str, password: str, database_name: str, host: str="localhost", port: int=5432, 
+                                connect_url_parm: str="", echo: bool=True, pool_size: int=20) -> Engine:
+    """创建postgresql引擎, 使用前应该执行如下命令安装数据库驱动: 
+    \npip install psycopg2
+
+    Args:
+        username (str): 数据库用户名
+        password (str): 数据库密码
+        database_name (str): 数据库名
+        host (str, optional): 数据库host. Defaults to "localhost".
+        port (int, optional): 数据库端口号. Defaults to 5432.
+        connect_url_parm (str, optional): 连接参数, 注意第一个字符应该为?. Defaults to "".
+        echo (bool, optional): 系统打印所生成的SQL. Defaults to True.
+        pool_size (int, optional): 连接池中保持的连接数. Defaults to 20.
+
+    Returns:
+        Engine: 数据库引擎
+    """
+    return create_engine(f"postgresql+psycopg2://{username}:{password}@{host}:{port}/{database_name}{connect_url_parm}", echo=echo, pool_size=pool_size)
+
+def create_sql_server_engine(username: str, password: str, database_name: str, host: str="localhost", port: int=1433, 
+                                connect_url_parm: str="?driver=ODBC+Driver+17+for+SQL+Server", echo: bool=True, pool_size: int=20) -> Engine:
+    """创建sql server引擎, 使用前应该执行如下命令安装数据库驱动: 
+    \npip install pyodbc
+
+    Args:
+        username (str): 数据库用户名
+        password (str): 数据库密码
+        database_name (str): 数据库名
+        host (str, optional): 数据库host. Defaults to "localhost".
+        port (int, optional): 数据库端口号. Defaults to 1433.
+        connect_url_parm (str, optional): 连接参数, 注意第一个字符应该为?. Defaults to "?driver=ODBC+Driver+17+for+SQL+Server".
+        echo (bool, optional): 系统打印所生成的SQL. Defaults to True.
+        pool_size (int, optional): 连接池中保持的连接数. Defaults to 20.
+
+    Returns:
+        Engine: 数据库引擎
+    """
+    return create_engine(f"mssql+pyodbc://{username}:{password}@{host}:{port}/{database_name}{connect_url_parm}", echo=echo, pool_size=pool_size)
+
+def create_oracle_engine(username: str, password: str, service_name: str, host: str="localhost", port: int=1521, 
+                            connect_url_parm: str="", echo: bool=True, pool_size: int=20) -> Engine:
+    """创建oracle引擎, 使用前应该执行如下命令安装数据库驱动: 
+    \npip install cx_Oracle
+
+    Args:
+        username (str): 数据库用户名
+        password (str): 数据库密码
+        service_name (str): 数据库名
+        host (str, optional): 数据库host. Defaults to "localhost".
+        port (int, optional): 数据库端口号. Defaults to 1521.
+        connect_url_parm (str, optional): 连接参数, 注意第一个字符应该为?. Defaults to "".
+        echo (bool, optional): 系统打印所生成的SQL. Defaults to True.
+        pool_size (int, optional): 连接池中保持的连接数. Defaults to 20.
+
+    Returns:
+        Engine: 数据库引擎
+    """
+    return create_engine(f"oracle+cx_oracle://{username}:{password}@{host}:{port}/{service_name}{connect_url_parm}", echo=echo, pool_size=pool_size)
+    
+
 class SqlalchemyToolkit:
     """Sqlalchemy工具类, 使用该类, 请运行如下命令安装所需库存:
     \npip install sqlalchemy
@@ -34,86 +115,6 @@ class SqlalchemyToolkit:
         if self.session:
             self.session.close_all()
             self.session = None
-    
-    def create_mysql_engine(self, username: str, password: str, database_name: str, host: str="localhost", port: int=3306, 
-                            connect_url_parm: str="?charset=utf8", echo: bool=True, pool_size: int=20) -> Engine:
-        """创建mysql引擎, 使用前应该执行如下命令安装数据库驱动: 
-        \npip install pymysql
-        
-        Args:
-            username (str): 数据库用户名
-            password (str): 数据库密码
-            database_name (str): 数据库名
-            host (str, optional): 数据库host. Defaults to "localhost".
-            port (int, optional): 数据库端口号. Defaults to 3306.
-            connect_url_parm (str, optional): 连接参数, 注意第一个字符应该为?. Defaults to "?charset=utf8".
-            echo (bool, optional): 系统打印所生成的SQL. Defaults to True.
-            pool_size (int, optional): 连接池中保持的连接数. Defaults to 20.
-
-        Returns:
-            Engine: 数据库引擎
-        """
-        return create_engine(f"mysql+pymysql://{username}:{password}@{host}:{port}/{database_name}{connect_url_parm}", echo=echo, pool_size=pool_size)
-    
-    def create_postgresql_engine(self, username: str, password: str, database_name: str, host: str="localhost", port: int=5432, 
-                                 connect_url_parm: str="", echo: bool=True, pool_size: int=20) -> Engine:
-        """创建postgresql引擎, 使用前应该执行如下命令安装数据库驱动: 
-        \npip install psycopg2
-
-        Args:
-            username (str): 数据库用户名
-            password (str): 数据库密码
-            database_name (str): 数据库名
-            host (str, optional): 数据库host. Defaults to "localhost".
-            port (int, optional): 数据库端口号. Defaults to 5432.
-            connect_url_parm (str, optional): 连接参数, 注意第一个字符应该为?. Defaults to "".
-            echo (bool, optional): 系统打印所生成的SQL. Defaults to True.
-            pool_size (int, optional): 连接池中保持的连接数. Defaults to 20.
-
-        Returns:
-            Engine: 数据库引擎
-        """
-        return create_engine(f"postgresql+psycopg2://{username}:{password}@{host}:{port}/{database_name}{connect_url_parm}", echo=echo, pool_size=pool_size)
-    
-    def create_sql_server_engine(self, username: str, password: str, database_name: str, host: str="localhost", port: int=1433, 
-                                 connect_url_parm: str="?driver=ODBC+Driver+17+for+SQL+Server", echo: bool=True, pool_size: int=20) -> Engine:
-        """创建sql server引擎, 使用前应该执行如下命令安装数据库驱动: 
-        \npip install pyodbc
-
-        Args:
-            username (str): 数据库用户名
-            password (str): 数据库密码
-            database_name (str): 数据库名
-            host (str, optional): 数据库host. Defaults to "localhost".
-            port (int, optional): 数据库端口号. Defaults to 1433.
-            connect_url_parm (str, optional): 连接参数, 注意第一个字符应该为?. Defaults to "?driver=ODBC+Driver+17+for+SQL+Server".
-            echo (bool, optional): 系统打印所生成的SQL. Defaults to True.
-            pool_size (int, optional): 连接池中保持的连接数. Defaults to 20.
-
-        Returns:
-            Engine: 数据库引擎
-        """
-        return create_engine(f"mssql+pyodbc://{username}:{password}@{host}:{port}/{database_name}{connect_url_parm}", echo=echo, pool_size=pool_size)
-    
-    def create_oracle_engine(self, username: str, password: str, service_name: str, host: str="localhost", port: int=1521, 
-                             connect_url_parm: str="", echo: bool=True, pool_size: int=20) -> Engine:
-        """创建oracle引擎, 使用前应该执行如下命令安装数据库驱动: 
-        \npip install cx_Oracle
-
-        Args:
-            username (str): 数据库用户名
-            password (str): 数据库密码
-            service_name (str): 数据库名
-            host (str, optional): 数据库host. Defaults to "localhost".
-            port (int, optional): 数据库端口号. Defaults to 1521.
-            connect_url_parm (str, optional): 连接参数, 注意第一个字符应该为?. Defaults to "".
-            echo (bool, optional): 系统打印所生成的SQL. Defaults to True.
-            pool_size (int, optional): 连接池中保持的连接数. Defaults to 20.
-
-        Returns:
-            Engine: 数据库引擎
-        """
-        return create_engine(f"oracle+cx_oracle://{username}:{password}@{host}:{port}/{service_name}{connect_url_parm}", echo=echo, pool_size=pool_size)
     
     def create_session(self, engine: Engine, mutiple_thread_session: bool=False):
         """创建session
