@@ -26,7 +26,6 @@ def get_column_letter(column_index: int) -> str:
         column_index //= 26
     return result
 
-
 def get_column_index(column: str) -> int:
     """通过列名获取列索引
 
@@ -531,7 +530,6 @@ class XlutilsAdapter:
             self.book = open_workbook(bck_path)
             self.sheet = self.book.sheet_by_name(self.sheet_name)
 
-
 class XlwingsAdapter:
 
     def __init__(self, app, book, sheet, excel_path, sheet_name):
@@ -855,7 +853,6 @@ class XlwingsAdapter:
         """
         return self.sheet[f"{column}{row}"].formula
 
-
 class ExcelUtils:
     """excel操作类, 若使用该工具类, 请使用如下命令安装第三方库: 
     \npip install openpyxl
@@ -867,13 +864,38 @@ class ExcelUtils:
     DEFAULT_ENGINE_DICT = {".xlsx": "openpyxl", ".xls": "xlwings"}
     ENGINE_LIST = ["openpyxl", "xlutils", "xlwings"]
 
-    def __init__(self, excel_path: str, sheet_name: str="Sheet1", engine: str=None, encoding: str="utf-8", visible=False):
+    @classmethod
+    def get_sheet_list(cls, excel_path: str, engine: str=None, visible: bool=False) -> list[str]:    
+        path = Path(excel_path)
+        excel_path = str(path.resolve())
+        if engine is None:
+            engine = cls.DEFAULT_ENGINE_DICT[path.suffix]
+        del path
+        if engine == "openpyxl":
+            book = load_workbook(excel_path, read_only=True)
+            sheet_list = book.sheetnames
+            book.close()
+            del book
+        elif engine == "xlutils":
+            book = open_workbook(excel_path)
+            sheet_list = book.sheet_names()
+            del book
+        elif engine == "xlwings":
+            app = xw.App(visible=visible, add_book=False)
+            book = app.books.open(excel_path)
+            sheet_list = book.sheet_names
+            book.close()
+            app.quit()
+            del app, book
+        return sheet_list
+        
+    def __init__(self, excel_path: str, sheet_name: str="Sheet1", engine: str=None, encoding: str="utf-8", visible: bool=False):
         """初始化excel操作类
 
         Args:
             excel_path (str): excel路径
             sheet_name (str, optional): sheet名. Defaults to "Sheet1".
-            engine (str, optional): 引擎名, 可以为 openpyxl|xlutils|xlwings, 若为None则自动选择引擎. Defaults to None.
+            engine (str, optional): 引擎名, 可以为 {openpyxl, xlutils, xlwings}, 若为None则自动选择引擎. Defaults to None.
             encoding (str, optional): 编码. Defaults to "utf-8".
             visible (bool, optional): 是否以可视化形式打开(只使用xlwings引擎有效). Defaults to False.
         """
