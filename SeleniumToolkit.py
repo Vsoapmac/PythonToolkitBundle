@@ -21,6 +21,14 @@ class EdgeOptionsSetter:
         """获取edge启动参数"""
         return self._edge_options
 
+    def add_argument(self, argument: str):
+        """设置启动参数
+
+        Args:
+            argument (str): 参数
+        """
+        self._edge_options.add_argument(argument)
+    
     def set_user_agent(self, user_agent: bool|str):
         """设置用户代理字符串, 让edge认为是在实际的浏览器上运行。
         
@@ -146,6 +154,14 @@ class ChromeOptionsSetter:
     def get_options(self) -> webdriver.ChromeOptions:
         """获取chrome启动参数"""
         return self._chrome_options
+    
+    def add_argument(self, argument: str):
+        """设置启动参数
+
+        Args:
+            argument (str): 参数
+        """
+        self._chrome_options.add_argument(argument)
     
     def set_user_agent(self, user_agent: bool|str):
         """设置用户代理字符串, 让chrome认为是在实际的浏览器上运行。
