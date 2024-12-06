@@ -112,13 +112,15 @@ class DrissionPageToolKit:
     broswer = None
     tab = None
     
-    def __init__(self, addr_or_opts: str|int|ChromiumOptions=None, session_options: SessionOptions=None):
+    def __init__(self, addr_or_opts: str|int|ChromiumOptions|ChromeOptionsSetter=None, session_options: SessionOptions=None):
         """初始化DrissionPageToolKit类
 
         Args:
             addr_or_opts (str | int | ChromiumOptions, optional): 浏览器地址:端口、ChromiumOptions对象或端口数字(int). Defaults to None.
             session_options (SessionOptions, optional): 使用双模Tab时使用的默认Session配置, 为None使用ini文件配置, 为False不从ini读取. Defaults to None.
         """
+        if isinstance(addr_or_opts, ChromeOptionsSetter):
+            addr_or_opts = addr_or_opts.get_options()
         self.broswer = Chromium(addr_or_opts, session_options)
         self.tab = self.broswer.latest_tab
         
@@ -126,8 +128,9 @@ class DrissionPageToolKit:
         return self
     
     def __exit__(self, exc_type, exc_val, exc_tb):
+        self.tab = None
         if self.broswer:
-            self.broswer.close()
+            self.broswer.quit()
             self.broswer = None
 
     def close(self, timeout: float=5, force: bool=False, del_data: bool=False):
@@ -226,7 +229,7 @@ class DrissionPageToolKit:
         """
         self.tab.forward(steps)
     
-    def screenshot(self, output_path: str=None, name: str=None, as_bytes: str|True=None, as_base64: str|True=None, 
+    def screenshot(self, output_path: str=None, name: str=None, as_bytes: str|bool=None, as_base64: str|bool=None, 
                    full_page: bool=False, left_top: tuple[int, int]=None, right_bottom: tuple[int, int]=None) -> bytes|str:
         """页面截图
 
@@ -246,37 +249,17 @@ class DrissionPageToolKit:
         """
         return self.tab.get_screenshot(output_path, name, as_bytes, as_base64, full_page, left_top, right_bottom)
     
-    def start_web(self, url: str, show_errmsg: bool=False, retry: int|None=3, interval: float|None=None, connect_timeout: float|None=60, 
-                  params: dict|None=None, json: dict|str=None, headers: dict=None, cookies: dict=None, files=None, 
-                  auth=None, allow_redirects: bool=True, proxies: dict=None, hooks=None, stream: bool=None, 
-                  verify: bool|str=None, cert=None, wait_type: str|False=False, loc_or_ele: str|tuple=None, wait_timeout: float=60, any_one: bool=False):
+    def start_web(self, url: str, wait_type: str|bool=False, loc_or_ele: str|tuple=None, wait_timeout: float=60, any_one: bool=False):
         """打开一个网址
 
         Args:
             url (str): 新标签页跳转到的网址, 为None时新建空标签页
-            show_errmsg (bool, optional): 连接出错时是否显示和抛出异常. Defaults to False.
-            retry (int | None, optional): 重试次数, 为None时使用页面参数. Defaults to 3.
-            interval (float | None, optional): 重试间隔(秒), 为None时使用页面参数. Defaults to 2.
-            connect_timeout (float | None, optional): 加载超时时间(秒). Defaults to 60.
-            params (dict | None, optional): url请求参数. Defaults to None.
-            json (dict | str, optional): 要发送的 JSON 数据, 会自动设置 Content-Type 为'application/json'. Defaults to None.
-            headers (dict, optional): 请求头. Defaults to None.
-            cookies (dict, optional): cookies 信息. Defaults to None.
-            files (optional): 要上传的文件, 可以是一个字典, 其中键是文件名, 值是文件对象或文件路径. Defaults to None.
-            auth (optional): 身份认证信息. Defaults to None.
-            allow_redirects (bool, optional): 是否允许重定向. Defaults to True.
-            proxies (dict, optional): 代理信息. Defaults to None.
-            hooks (optional): 回调方法. Defaults to None.
-            stream (bool, optional): 是否使用流式传输. Defaults to None.
-            verify (bool | str, optional): 是否验证 SSL 证书. Defaults to None.
-            cert (optional): SSL 客户端证书文件的路径(.pem 格式), 或('cert', 'key')元组. Defaults to None.
             wait_type (str | False, optional): 在开启网址后等待元素的逻辑, 可选{display(元素出现), load(元素加载在DOM树中)}, 为False则不等待. Defaults to False.
             loc_or_ele (str | tuple, optional): 元素对象或者定位. Defaults to None.
             wait_timeout (float, optional): 等待超时时间. Defaults to 60.
             any_one (bool, optional): 是否等待到一个就返回, wait_type为load则生效. Defaults to False.
         """
-        self.tab.get(url, show_errmsg, retry, interval, connect_timeout, 
-                     params, json, headers, cookies, files, auth, allow_redirects, proxies, hooks, stream, verify, cert)
+        self.tab.get(url)
         if wait_type == "display":
             self.tab.wait.ele_displayed(loc_or_ele, wait_timeout, True)
         elif wait_type == "load":
@@ -341,14 +324,14 @@ class DrissionPageToolKit:
         """点击元素
 
         Args:
-            locator (str | tuple): 元素的定位信息, 可以是元素对象, loc元组, 或查询字符串
+            locator (str | tuple): 元素的定位信息, 可以是元素对象, loc元组, 或查询字符串. Defaults to None.
             index (int, optional): 获取第几个, 从1开始, 可传入负数获取倒数第几个. Defaults to 1.
             timeout (float, optional): 查找元素超时时间(秒). Defaults to 60.
             element (ChromiumElement, optional): 元素对象, 输入后locator、index和timeout无效. Defaults to None.
         """
-        self.tab.ele(locator, index, timeout).click() if element is not None else element.click()
+        self.tab.ele(locator, index, timeout).click() if element is None else element.click()
     
-    def send_text(self, locator: str|tuple, text_values: str|list="", clear: bool=True, by_js: bool=False, index: int=1, timeout: float=60, element=None):
+    def send_text(self, locator: str|tuple=None, text_values: str|list="", clear: bool=True, by_js: bool=False, index: int=1, timeout: float=60, element=None):
         """向元素输入文本或组合键, 也可用于输入文件路径到上传控件
 
         Args:
@@ -360,7 +343,7 @@ class DrissionPageToolKit:
             timeout (float, optional): 查找元素超时时间(秒). Defaults to 60.
             element (ChromiumElement, optional): 元素对象, 输入后locator、index和timeout无效. Defaults to None.
         """
-        self.tab.ele(locator, index, timeout).input(text_values, clear, by_js) if element is not None else element.input(text_values, clear, by_js)
+        self.tab.ele(locator, index, timeout).input(text_values, clear, by_js) if element is None else element.input(text_values, clear, by_js)
     
     def get_text(self, locator: str|tuple=None, index: int=1, timeout: float=60, element=None) -> str:
         """获取元素文本
@@ -374,7 +357,7 @@ class DrissionPageToolKit:
         Returns:
             str: 元素文本
         """
-        return element.text() if element else self.tab.ele(locator, index, timeout).text()
+        return self.tab.ele(locator, index, timeout).text() if element is None else element.text()
     
     def get_texts(self, locator: str|tuple=None, index: int=1, timeout: float=60, element=None) -> list:
         """获取元素的所有文本
@@ -388,7 +371,7 @@ class DrissionPageToolKit:
         Returns:
             list: 元素文本列表
         """
-        return element.texts() if element else self.tab.ele(locator, index, timeout).texts()
+        return self.tab.ele(locator, index, timeout).texts() if element is None else element.texts()
     
     def select_combobox(self, locator: str|tuple=None, index: int=1, timeout: float=60, element=None, 
                         select_type: str="index", select_value: int|str|tuple|list=0):
@@ -402,7 +385,7 @@ class DrissionPageToolKit:
             select_type (str, optional): 选择策略, 选项有:{all, index, text, value}. Defaults to "index".
             select_value (int | str | tuple | list, optional): 选择定位值. Defaults to 0.
         """
-        if element == None:
+        if element is None:
             element = self.tab.ele(locator, index, timeout)
         if select_type == "index":
             element.select.by_index(select_value, timeout)
@@ -425,7 +408,7 @@ class DrissionPageToolKit:
             deselect_type (str, optional): 选择策略, 选项有:{all, index, text, value}. Defaults to "all".
             deselect_value (int | str | tuple | list, optional): 取消选择定位值. Defaults to 0.
         """
-        if element == None:
+        if element is None:
             element = self.tab.ele(locator, index, timeout)
         if deselect_type == "all":
             element.select.clear()
@@ -565,7 +548,7 @@ class DrissionPageToolKit:
             target_image_path (str, optional): 目标保存路径. Defaults to "./capture_image.png".
             timeout (int, optional): 等待超时时间. Defaults to 60.
         """
-        if element == None:
+        if element is None:
             element = self.tab.ele(locator, index, timeout)
         image_url = element.attr(image_box_attr)
         response = requests.get(image_url, stream=True)
@@ -592,7 +575,7 @@ class DrissionPageToolKit:
         Returns:
             str: 验证码
         """
-        if element == None:
+        if element is None:
             element = self.tab.ele(locator, index, timeout)
         image_url = element.attr(code_box_attr)
         response = requests.get(image_url, stream=True)
