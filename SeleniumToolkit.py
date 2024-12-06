@@ -391,52 +391,48 @@ class SeleniumToolkit:
         """前进到下一页"""
         self.driver.forward()
     
-    def wait_until_element_disappear(self, by: str, value: str, timeout: int=60):
+    def wait_until_element_disappear(self, locator: tuple, timeout: int=60):
         """等待直至某元素不存在于DOM树或消失
 
         Args:
-            by (str): 元素获取策略
-            value (str): 元素定位值
+            locator (tuple): 元素的定位信息
             timeout (int, optional): 等待超时时间. Defaults to 60.
         """
-        WebDriverWait(self.driver, timeout).until(EC.invisibility_of_element_located((by, value)))
+        WebDriverWait(self.driver, timeout).until(EC.invisibility_of_element_located(locator))
     
-    def find_element_until_appear(self, by: str, value: str, timeout: int=60) -> WebElement:
+    def find_element_until_appear(self, locator: tuple, timeout: int=60) -> WebElement:
         """获取页面可见的元素
 
         Args:
-            by (str): 元素获取策略
-            value (str): 元素定位值
+            locator (tuple): 元素的定位信息
             timeout (int, optional): 等待超时时间. Defaults to 60.
 
         Returns:
             WebElement: 对应元素
         """
-        return WebDriverWait(self.driver, timeout).until(EC.visibility_of_element_located((by, value)))
+        return WebDriverWait(self.driver, timeout).until(EC.visibility_of_element_located(locator))
     
-    def find_element(self, by: str, value: str, element: WebElement=None, timeout: int=60) -> WebElement:
+    def find_element(self, locator: tuple, element: WebElement=None, timeout: int=60) -> WebElement:
         """获取元素, 该方法会判断元素是否被加载到了DOM树里, 并不代表该元素一定可见
 
         Args:
-            by (str): 元素获取策略
-            value (str): 元素定位值
-            element (WebElement, optional): 元素,不为None则获取该元素的子元素 . Defaults to None.
+            locator (tuple): 元素的定位信息
+            element (WebElement, optional): 元素, 不为None则获取该元素的子元素 . Defaults to None.
             timeout (int, optional): 等待超时时间. Defaults to 60.
 
         Returns:
             WebElement: 对应元素
         """
         if element is None:
-            return WebDriverWait(self.driver, timeout).until(EC.presence_of_element_located((by, value)))
+            return WebDriverWait(self.driver, timeout).until(EC.presence_of_element_located(locator))
         else:
-            return element.find_element(by, value)
+            return element.find_element(*locator)
 
-    def find_elements(self, by: str, value: str, element: WebElement=None, timeout: int=60) -> list[WebElement]:
+    def find_elements(self, locator: tuple, element: WebElement=None, timeout: int=60) -> list[WebElement]:
         """获取一系列元素
 
         Args:
-            by (str): 元素获取策略
-            value (str): 元素定位值
+            locator (tuple): 元素的定位信息
             element (WebElement, optional): 元素,不为None则获取该元素的子元素 . Defaults to None.
             timeout (int, optional): 等待超时时间. Defaults to 60.
 
@@ -444,42 +440,32 @@ class SeleniumToolkit:
             list[WebElement]: 对应的所有元素
         """
         if element is None:
-            return WebDriverWait(self.driver, timeout).until(EC.presence_of_all_elements_located((by, value)))
+            return WebDriverWait(self.driver, timeout).until(EC.presence_of_all_elements_located(locator))
         else:
-            return element.find_elements(by, value)
+            return element.find_elements(*locator)
 
-    def click(self, by: str=None, value: str=None, element: WebElement=None, timeout: int=60):
+    def click(self, locator: tuple=None, element: WebElement=None, timeout: int=60):
         """点击元素
 
         Args:
-            by (str, optional): 元素获取策略. Defaults to None.
-            value (str, optional): 元素定位值. Defaults to None.
-            element (WebElement, optional): 元素, 输入后by和value无效. Defaults to None.
+            locator (tuple): 元素的定位信息. Defaults to None.
+            element (WebElement, optional): 元素, 输入后locator无效. Defaults to None.
             timeout (int, optional): 等待超时时间. Defaults to 60.
-            
-        Example:
-            >>> driver = SeleniumToolkit()
-            >>> driver.start_web("web-site-url")
-            >>> driver.click(By.XPATH, "XPATH")
-            >>> ele = driver.find_element(By.XPATH, "XPATH")
-            >>> driver.click(element=ele, timeout=100)
-            >>> driver.close()
         """
-        WebDriverWait(self.driver, timeout).until(EC.presence_of_element_located((by, value))).click() if element is not None else element.click()
+        element.click() if element else WebDriverWait(self.driver, timeout).until(EC.presence_of_element_located(locator)).click()
     
-    def select_combobox(self, select_type: str="index", by: str=None, value: str=None, element: WebElement=None, select_value: int | str=0, timeout: int=60):
+    def select_combobox(self, select_type: str="index", locator: tuple=None, element: WebElement=None, select_value: int | str=0, timeout: int=60):
         """选择<select></select>标签的选项
 
         Args:
             select_type (str, optional): 选择策略, 选项有:index|value_attr|value. Defaults to "index".
-            by (str, optional): 元素获取策略. Defaults to None.
-            value (str, optional): 元素定位值. Defaults to None.
-            element (WebElement, optional): 元素, 输入后by和value无效. Defaults to None.
+            locator (tuple): 元素的定位信息. Defaults to None.
+            element (WebElement, optional): 元素, 输入后locator无效. Defaults to None.
             select_value (int | str, optional): 选择值, 若为index则从0开始. Defaults to 0.
             timeout (int, optional): 等待超时时间. Defaults to 60.
         """
-        if element == None:
-            element = WebDriverWait(self.driver, timeout).until(EC.presence_of_element_located((by, value)))
+        if element is None:
+            element = WebDriverWait(self.driver, timeout).until(EC.presence_of_element_located(locator))
         select = Select(element)
         if select_type == "index":
             select.select_by_index(select_value)
@@ -488,19 +474,18 @@ class SeleniumToolkit:
         elif select_type == "value":
             select.select_by_visible_text(select_value)
     
-    def deselect_combobox(self, deselect_type: str="all", by: str=None, value: str=None, element: WebElement=None, deselect_value: int | str=0, timeout: int=60):
+    def deselect_combobox(self, deselect_type: str="all", locator: tuple=None, element: WebElement=None, deselect_value: int | str=0, timeout: int=60):
         """取消选择<select></select>标签的选项
 
         Args:
             deselect_type (str, optional): 取消选择策略, 选项有:all|index|value_attr|value. Defaults to "all".
-            by (str, optional): 元素获取策略. Defaults to None.
-            value (str, optional): 元素定位值. Defaults to None.
+            locator (tuple): 元素的定位信息. Defaults to None.
             element (WebElement, optional): 元素, 输入后by和value无效. Defaults to None.
             deselect_value (int | str, optional): 选择值, 若为index则从0开始. Defaults to 0.
             timeout (int, optional): 等待超时时间. Defaults to 60.
         """
-        if element == None:
-            element = WebDriverWait(self.driver, timeout).until(EC.presence_of_element_located((by, value)))
+        if element is None:
+            element = WebDriverWait(self.driver, timeout).until(EC.presence_of_element_located(locator))
         select = Select(element)
         if deselect_type == "all":
             select.deselect_all()
@@ -551,8 +536,8 @@ class SeleniumToolkit:
         """
         ActionChains(self.driver).click_and_hold(element).perform()
 
-    def mouse_drag_and_drop(self, from_by: str=None, from_value: str=None, from_element: WebElement=None, 
-                            to_by: str=None, to_value: str=None, to_element: WebElement=None, from_timeout: int=60, to_timeout: int=60):
+    def mouse_drag_and_drop(self, from_locator: tuple=None, from_element: WebElement=None, 
+                            to_locator: tuple=None, to_element: WebElement=None, from_timeout: int=60, to_timeout: int=60):
         """鼠标拖动元素到另外一个元素中
 
         Args:
@@ -565,60 +550,48 @@ class SeleniumToolkit:
             from_timeout (int, optional): 被拖拽元素等待超时时间. Defaults to 60.
             to_timeout (int, optional): 目标元素等待超时时间. Defaults to 60.
         """
-        if from_element == None:
-            from_element = WebDriverWait(self.driver, from_timeout).until(EC.presence_of_element_located((from_by, from_value)))
-        if to_element == None:
-            to_element = WebDriverWait(self.driver, to_timeout).until(EC.presence_of_element_located((to_by, to_value)))
+        if from_element is None:
+            from_element = WebDriverWait(self.driver, from_timeout).until(EC.presence_of_element_located(from_locator))
+        if to_element is None:
+            to_element = WebDriverWait(self.driver, to_timeout).until(EC.presence_of_element_located(to_locator))
         ActionChains(self.driver).drag_and_drop(from_element, to_element).perform()
         
-    def get_text(self, by: str=None, value: str=None, element: WebElement=None, timeout: int=60) -> str:
+    def get_text(self, locator: tuple=None, element: WebElement=None, timeout: int=60) -> str:
         """获取元素文本
 
         Args:
-            by (str, optional): 元素获取策略. Defaults to None.
-            value (str, optional): 元素定位值. Defaults to None.
+            locator (tuple): 元素的定位信息. Defaults to None.
             element (WebElement, optional): 元素, 输入后by和value无效. Defaults to None.
             timeout (int, optional): 等待超时时间. Defaults to 60.
 
         Returns:
             str: 元素文本
         """
-        return element.text() if element else WebDriverWait(self.driver, timeout).until(EC.presence_of_element_located((by, value))).text()
+        return element.text() if element else WebDriverWait(self.driver, timeout).until(EC.presence_of_element_located(locator)).text()
 
-    def send_text(self, by: str=None, value: str=None, element: WebElement=None, text_value: str="", timeout: int=60):
+    def send_text(self, locator: tuple=None, element: WebElement=None, text_value: str="", timeout: int=60):
         """发送文本
 
         Args:
-            by (str, optional): 元素获取策略. Defaults to None.
-            value (str, optional): 元素定位值. Defaults to None.
+            locator (tuple): 元素的定位信息. Defaults to None.
             element (WebElement, optional): 元素, 输入后by和value无效. Defaults to None.
             text_value (str): 文本, 对input输入文件路径时会上传对应的文件. Defaults to "".
             timeout (int, optional): 等待超时时间. Defaults to 60.
-            
-        Example:
-            >>> driver = SeleniumToolkit()
-            >>> driver.start_web("web-site-url")
-            >>> driver.send_text(By.XPATH, "INPUT_XPATH", text_value="hello world") # 发送文本
-            >>> driver.send_text(By.XPATH, "INPUT_FILE_XPATH", text_value="./test.txt") # 发送文件
-            >>> ele = driver.find_element(By.XPATH, "INPUT_XPATH")
-            >>> driver.send_text(element=ele, text_value="hello world", timeout=100)
-            >>> driver.close()
         """
-        element.send_keys(text_value) if element else WebDriverWait(self.driver, timeout).until(EC.presence_of_element_located((by, value))).send_keys(text_value)
+        element.send_keys(text_value) if element else WebDriverWait(self.driver, timeout).until(EC.presence_of_element_located(locator)).send_keys(text_value)
     
-    def save_element_image(self, by: str=None, value: str=None, element: WebElement=None, image_box_attr: str="src", target_image_path: str="./capture_image.png", timeout: int=60):
+    def save_element_image(self, locator: tuple=None, element: WebElement=None, image_box_attr: str="src", target_image_path: str="./capture_image.png", timeout: int=60):
         """保存元素图片
 
         Args:
-            by (str, optional): 元素获取策略. Defaults to None.
-            value (str, optional): 元素定位值. Defaults to None.
+            locator (tuple): 元素的定位信息. Defaults to None.
             element (WebElement, optional): 元素, 输入后by和value无效. Defaults to None.
             image_box_attr (str, optional): 图片box中的url属性, 会通过该url下载图片. Defaults to "src".
             target_image_path (str, optional): 目标保存路径. Defaults to "./capture_image.png".
             timeout (int, optional): 等待超时时间. Defaults to 60.
         """
-        if element == None:
-            element = WebDriverWait(self.driver, timeout).until(EC.presence_of_element_located((by, value)))
+        if element is None:
+            element = WebDriverWait(self.driver, timeout).until(EC.presence_of_element_located(locator))
         image_url = element.get_attribute(image_box_attr)
         response = requests.get(image_url, stream=True)
         if response.status_code == 200:
@@ -628,34 +601,23 @@ class SeleniumToolkit:
         else:
             raise Exception(f"response status code not 200, is: {response.status_code}, can not download images")
     
-    def type_keys(self, *key: str, by: str=None, value: str=None, element: WebElement=None, timeout: int=60):
+    def type_keys(self, *key: str, locator: tuple=None, element: WebElement=None, timeout: int=60):
         """输入模拟按键
 
         Args:
             key (str, optional): 模拟按键
-            by (str, optional): 元素获取策略. Defaults to None.
-            value (str, optional): 元素定位值. Defaults to None.
+            locator (tuple): 元素的定位信息. Defaults to None.
             element (WebElement, optional): 元素, 输入后by和value无效. Defaults to None.
             timeout (int, optional): 等待超时时间. Defaults to 60.
-            
-        Example:
-            >>> driver = SeleniumToolkit()
-            >>> driver.start_web("web-site-url")
-            >>> driver.type_keys(driver.keys.ENTER, by=By.XPATH, value="INPUT_XPATH") # 输入Enter
-            >>> driver.type_keys(driver.keys.CONTROL, "a", by=By.XPATH, value="INPUT_XPATH") # 输入Ctrl+a
-            >>> ele = driver.find_element(By.XPATH, "INPUT_XPATH")
-            >>> driver.type_keys(driver.keys.ENTER, element=ele, timeout=100)
-            >>> driver.close()
         """
-        element.send_keys(key) if element else WebDriverWait(self.driver, timeout).until(EC.presence_of_element_located((by, value))).send_keys(key)
+        element.send_keys(key) if element else WebDriverWait(self.driver, timeout).until(EC.presence_of_element_located(locator)).send_keys(key)
     
-    def ocr_code(self, by: str=None, value: str=None, element: WebElement=None, code_box_attr: str="src", 
+    def ocr_code(self, locator: tuple=None, element: WebElement=None, code_box_attr: str="src", 
                  cache_image_path: str="./cache_code_image.png", auto_delete_image: bool=True, timeout: int=60) -> str:
         """使用ocr检测验证码
 
         Args:
-            by (str, optional): 元素获取策略. Defaults to None.
-            value (str, optional): 元素定位值. Defaults to None.
+            locator (tuple): 元素的定位信息. Defaults to None.
             element (WebElement, optional): 元素, 输入后by和value无效. Defaults to None.
             code_box_attr (str, optional): 验证码box中的url属性, 会通过该url下载图片. Defaults to "src".
             cache_image_path (str, optional): 缓存图片路径. Defaults to "./cache_code_image.png".
@@ -665,8 +627,8 @@ class SeleniumToolkit:
         Returns:
             str: 验证码
         """
-        if element == None:
-            element = WebDriverWait(self.driver, timeout).until(EC.presence_of_element_located((by, value)))
+        if element is None:
+            element = WebDriverWait(self.driver, timeout).until(EC.presence_of_element_located(locator))
         image_url = element.get_attribute(code_box_attr)
         response = requests.get(image_url, stream=True)
         if response.status_code == 200:
@@ -720,12 +682,11 @@ class SeleniumToolkit:
         """
         return self.driver.page_source
     
-    def get_element_HTML(self, by: str=None, value: str=None, element: WebElement=None, timeout: int=60, innerHTML: bool=False, outerHTML: bool=True) -> str:
+    def get_element_HTML(self, locator: tuple=None, element: WebElement=None, timeout: int=60, innerHTML: bool=False, outerHTML: bool=True) -> str:
         """获取元素的HTML文档
 
         Args:
-            by (str, optional): 元素获取策略. Defaults to None.
-            value (str, optional): 元素定位值. Defaults to None.
+            locator (tuple): 元素的定位信息. Defaults to None.
             element (WebElement, optional): 元素, 输入后by和value无效. Defaults to None.
             timeout (int, optional): 等待超时时间. Defaults to 60.
             innerHTML (bool, optional): 获取元素的内部HTML(不包括元素本身的标签). Defaults to False.
@@ -735,9 +696,9 @@ class SeleniumToolkit:
             str: 元素的HTML文档
         """
         if outerHTML:
-            html_content = element.get_attribute('outerHTML') if element else self.find_element(by, value, timeout).get_attribute('outerHTML')
+            html_content = element.get_attribute('outerHTML') if element else self.find_element(locator, timeout=timeout).get_attribute('outerHTML')
         elif innerHTML:
-            html_content = element.get_attribute('innerHTML') if element else self.find_element(by, value, timeout).get_attribute('innerHTML')
+            html_content = element.get_attribute('innerHTML') if element else self.find_element(locator, timeout=timeout).get_attribute('innerHTML')
         return html_content
     
     def operate_alert(self, op_type: str="accept", send_text: str=None) -> str:
