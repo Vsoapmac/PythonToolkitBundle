@@ -63,7 +63,7 @@ def get_parents(path: str, is_resolve: bool=True) -> list[str]:
     """
     return [str(parent) for parent in Path(path).resolve().parents] if is_resolve else [str(parent) for parent in Path(path).parents]
 
-def get_project_folder_path(project_name: str = '', file_level: int = -1) -> Path:
+def get_project_dir(project_name: str = '', file_level: int = -1) -> Path:
     """获取项目绝对路径
 
     Args:
