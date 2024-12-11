@@ -19,3 +19,5 @@ xlutils
 xlwings
 xlwt
 DrissionPage
+tensorboard
+progressbar
