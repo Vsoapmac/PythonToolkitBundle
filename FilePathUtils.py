@@ -235,6 +235,18 @@ def create_folder(folder_path: str | Path):
         os.makedirs(path)
     del path
 
+def is_path_exists(path: str | Path) -> bool:
+    """判断路径是否存在, 可以是文件夹或文件
+
+    Args:
+        path (str | Path): 文件或文件夹路径
+
+    Returns:
+        bool: 是否存在
+    """
+    path = Path(path) if isinstance(path, str) else path
+    return path.exists()
+
 def read_file(file_path: str | Path, encoding="UTF-8") -> str:
     """读取文件
 
