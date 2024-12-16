@@ -145,7 +145,7 @@ def json_fomatter(json_text: str|dict, save_file: str|None=None, print_json: boo
         with open(save_file, "w", encoding="utf-8") as f:
             f.write(dump_json)
     if print_json:
-        print_json(dump_json)
+        print(dump_json)
     return dump_json
 
 def html_fomatter(html_text: str, save_file: str|None=None, print_html: bool=False, parse_method: str="lxml") -> str:
