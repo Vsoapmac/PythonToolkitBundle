@@ -327,7 +327,7 @@ def copy_folder(from_dir: str | Path, to_dir: str | Path):
     """
     shutil.copytree(from_dir, to_dir)
 
-def copy_multiple_file(from_dir: str | Path, to_dir: str | Path, file_name_list: list, max_workers=1):
+def copy_multiple_file(from_dir: str | Path, file_name_list: list, to_dir: str | Path, max_workers=1):
     """复制文件夹中指定的多个文件到指定路径
 
     Args:
