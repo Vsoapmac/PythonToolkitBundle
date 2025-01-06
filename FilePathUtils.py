@@ -300,88 +300,88 @@ def rename_file(old_file_path: str | Path, new_file_name: str) -> Path:
     path = old_file_path.parent
     return old_file_path.rename(path / new_file_name)
 
-def copy_single_file(from_file_path: str | Path, to_file_folder: str | Path):
+def copy_single_file(from_file_path: str | Path, to_dir: str | Path):
     """复制单个文件到指定路径
 
     Args:
         from_file_path (str | Path): 源文件路径
-        to_file_folder (str | Path): 目标文件夹路径
+        to_dir (str | Path): 目标文件夹路径
 
     Raises:
         Exception: 源文件不存在则抛出异常
     """
     from_file_path = Path(from_file_path).resolve() if isinstance(from_file_path, str) else from_file_path.resolve()
-    to_file_path = Path(to_file_folder, from_file_path.name).resolve()
+    to_file_path = Path(to_dir, from_file_path.name).resolve()
     if from_file_path.exists():
         shutil.copy(from_file_path, to_file_path)
         del from_file_path, to_file_path
     else:
         raise Exception(f"源文件{from_file_path}不存在, 请检查")
 
-def copy_folder(from_folder_path: str | Path, to_folder_path: str | Path):
+def copy_folder(from_dir: str | Path, to_dir: str | Path):
     """复制文件夹中的所有文件到指定路径
 
     Args:
-        from_folder_path (str | Path): 源文件夹路径
-        to_folder_path (str | Path): 目标文件夹路径
+        from_dir (str | Path): 源文件夹路径
+        to_dir (str | Path): 目标文件夹路径
     """
-    shutil.copytree(from_folder_path, to_folder_path)
+    shutil.copytree(from_dir, to_dir)
 
-def copy_multiple_file(from_folder_path: str | Path, to_folder_path: str | Path, file_name_list: list, max_workers=1):
+def copy_multiple_file(from_dir: str | Path, to_dir: str | Path, file_name_list: list, max_workers=1):
     """复制文件夹中指定的多个文件到指定路径
 
     Args:
-        from_folder_path (str | Path): 源文件夹路径
-        to_folder_path (str | Path): 目标文件夹路径
+        from_dir (str | Path): 源文件所在的文件夹路径
+        to_dir (str | Path): 目标文件夹路径
         file_name_list (list): 源文件夹中的文件名列表
         max_workers (int, optional): 一次执行的最大线程数. Defaults to 1.
     """
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         for file_name in file_name_list:
-            from_path = Path(from_folder_path, file_name)
-            to_path = Path(to_folder_path, file_name)
+            from_path = Path(from_dir, file_name)
+            to_path = Path(to_dir, file_name)
             executor.submit(shutil.copy, from_path, to_path)
             del from_path, to_path
 
-def move_single_file(from_file_path: str | Path, to_file_folder: str | Path):
+def move_single_file(from_file_path: str | Path, to_dir: str | Path):
     """移动单个文件
 
     Args:
         from_file_path (str | Path): 源文件路径
-        to_file_folder (str | Path): 目标文件夹路径
+        to_dir (str | Path): 目标文件夹路径
 
     Raises:
         Exception: 源文件不存在则抛出异常
     """
     from_file_path = Path(from_file_path).resolve() if isinstance(from_file_path, str) else from_file_path.resolve()
-    to_file_path = Path(to_file_folder, from_file_path.name).resolve()
+    to_file_path = Path(to_dir, from_file_path.name).resolve()
     if from_file_path.exists():
         shutil.move(from_file_path, to_file_path)
         del from_file_path, to_file_path
     else:
         raise Exception(f"源文件{from_file_path}不存在, 请检查")
 
-def move_folder(from_folder_path: str | Path, to_folder_path: str | Path):
+def move_folder(from_dir: str | Path, to_dir: str | Path):
     """将文件夹中的所有文件移动到指定路径
 
     Args:
-        from_folder_path (str | Path): 源文件夹路径
-        to_folder_path (str | Path): 目标文件夹路径
+        from_dir (str | Path): 源文件夹路径
+        to_dir (str | Path): 目标文件夹路径
     """
-    shutil.move(from_folder_path, to_folder_path)
+    shutil.move(from_dir, to_dir)
 
-def move_multiple_file(from_folder_path: str | Path, to_folder_path: str | Path, file_name_list: list, max_workers=1):
+def move_multiple_file(from_dir: str | Path, file_name_list: list, to_dir: str | Path, max_workers=1):
     """移动文件夹中指定的多个文件到指定路径
 
     Args:
-        from_folder_path (str | Path): 源文件夹路径
-        to_folder_path (str | Path): 目标文件夹路径
+        from_dir (str | Path): 源文件所在的文件夹路径
         file_name_list (list): 源文件夹中的文件名列表
+        to_dir (str | Path): 目标文件夹路径
         max_workers (int, optional): 一次执行的最大线程数. Defaults to 1.
     """
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         for file_name in file_name_list:
-            from_path = Path(from_folder_path, file_name)
-            to_path = Path(to_folder_path, file_name)
+            from_path = Path(from_dir, file_name)
+            to_path = Path(to_dir, file_name)
             executor.submit(shutil.move, from_path, to_path)
             del from_path, to_path
