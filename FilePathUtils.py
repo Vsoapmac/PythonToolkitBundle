@@ -90,7 +90,7 @@ def get_project_dir(project_file_or_dir: str|Path=None, max_levels: int=10) -> s
         current = current.parent
 
     # 如果没有找到标识文件，返回直接返回cwd
-    return cwd
+    return str(cwd)
 
 def get_file_modify_day(file_path: str | Path, time_format="%Y%m%d") -> str:
     """查看文件修改日期
