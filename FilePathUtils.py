@@ -81,11 +81,10 @@ def get_project_dir(project_file_or_dir: str|Path=None, max_levels: int=10) -> s
     cwd = Path.cwd()
     current = cwd
     for _ in range(max_levels):
-        scan_default_files_or_dirs_exists = (current / ".git").exists() or (current / "requirements.txt").exists() or \
-        (current / ".gitignore").exists() or (current / "README.md").exists()
         # 检查当前目录是否包含项目标识文件或目录
         if project_file_or_dir is None:
-            if scan_default_files_or_dirs_exists:
+            if (current / ".git").exists() or (current / "requirements.txt").exists() or \
+            (current / ".gitignore").exists() or (current / "README.md").exists():
                     return current
         else:
             if (current / project_file_or_dir).exists():
