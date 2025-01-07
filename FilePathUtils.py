@@ -64,7 +64,8 @@ def get_parents(path: str, is_resolve: bool=True) -> list[str]:
     return [str(parent) for parent in Path(path).resolve().parents] if is_resolve else [str(parent) for parent in Path(path).parents]
 
 def get_project_dir(project_file_or_dir: str|Path=None, max_levels: int=10) -> str:
-    """获取项目绝对路径, 若提供的文件或文件夹不存在或者项目不存在如下文件时会返回`Path.cwd()`
+    """获取项目绝对路径
+    \n若在项目扫描不到project_file_or_dir参数中提供的文件或文件夹, 或project_file_or_dir为None时项目不存在如下文件或文件夹时会返回`Path.cwd()`
     \n.git
     \nrequirements.txt
     \n.gitignore
@@ -80,10 +81,15 @@ def get_project_dir(project_file_or_dir: str|Path=None, max_levels: int=10) -> s
     cwd = Path.cwd()
     current = cwd
     for _ in range(max_levels):
+        scan_default_files_or_dirs_exists = (current / ".git").exists() or (current / "requirements.txt").exists() or \
+        (current / ".gitignore").exists() or (current / "README.md").exists()
         # 检查当前目录是否包含项目标识文件或目录
-        if (project_file_or_dir is not None and (current / project_file_or_dir).exists()) or (current / ".git").exists() \
-        or (current / "requirements.txt").exists() or (current / ".gitignore").exists() or (current / "README.md").exists():
-            return current
+        if project_file_or_dir is None:
+            if scan_default_files_or_dirs_exists:
+                    return current
+        else:
+            if (current / project_file_or_dir).exists():
+                return current
         # 继续向上查找, 到达根目录立刻断开
         if current.parent == current:
             break
