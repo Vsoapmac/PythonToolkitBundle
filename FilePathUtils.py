@@ -63,34 +63,34 @@ def get_parents(path: str, is_resolve: bool=True) -> list[str]:
     """
     return [str(parent) for parent in Path(path).resolve().parents] if is_resolve else [str(parent) for parent in Path(path).parents]
 
-def get_project_dir(project_name: str = '', file_level: int = -1) -> Path:
-    """获取项目绝对路径
-
+def get_project_dir(project_file_or_dir: str|Path=None, max_levels: int=10) -> str:
+    """获取项目绝对路径, 若提供的文件或文件夹不存在或者项目不存在如下文件时会返回`Path.cwd()`
+    \n.git
+    \nrequirements.txt
+    \n.gitignore
+    \nREADME.md
+    
     Args:
-        project_name (str, optional): 项目名称. Defaults to ''.
-        file_level (int, optional): 文件在当前项目的哪一层, 在当前文件夹下为0, 在项目子文件夹下为1, 在项目子文件夹下的子文件夹为2, 以此类推。当file_level > 0时, 形参project_name就不会起作用了, 只有file_level=-1时才会起作用. Defaults to -1.
-
-    Raises:
-        Exception: 路径不存在则抛出异常
+        project_file_or_dir (str | Path, optional): 项目下的文件或者文件夹, 用于扫描. Defaults to None.
+        max_levels (int, optional): 最大向上查找层级. Defaults to 10.
 
     Returns:
-        Path: 项目绝对路径
+        str: 项目路径
     """
     cwd = Path.cwd()
-    if file_level == -1:
-        python_file_path = str(cwd.resolve())
-        project_folder_path = Path(python_file_path[0:python_file_path.find(project_name) + len(project_name)])
-        if not project_folder_path.exists():
-            raise Exception(f"路径{project_folder_path}不存在, 检查输入形参中的项目名称【{project_name}】是否正确")
-        else:
-            return project_folder_path
-    elif file_level == 0:
-        return cwd
-    elif file_level > 0:
-        current = cwd.parent
-        for _ in range(file_level - 1):
-            current = current.parent
-        return current
+    current = cwd
+    for _ in range(max_levels):
+        # 检查当前目录是否包含项目标识文件或目录
+        if (project_file_or_dir is not None and (current / project_file_or_dir).exists()) or (current / ".git").exists() \
+        or (current / "requirements.txt").exists() or (current / ".gitignore").exists() or (current / "README.md").exists():
+            return current
+        # 继续向上查找, 到达根目录立刻断开
+        if current.parent == current:
+            break
+        current = current.parent
+
+    # 如果没有找到标识文件，返回直接返回cwd
+    return cwd
 
 def get_file_modify_day(file_path: str | Path, time_format="%Y%m%d") -> str:
     """查看文件修改日期
