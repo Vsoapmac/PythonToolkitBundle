@@ -63,7 +63,7 @@ def get_parents(path: str, is_resolve: bool=True) -> list[str]:
     """
     return [str(parent) for parent in Path(path).resolve().parents] if is_resolve else [str(parent) for parent in Path(path).parents]
 
-def get_project_dir(project_file_or_dir: str|Path=None, max_levels: int=10) -> str:
+def get_project_dir(project_files_or_dirs: str|Path|list=None, max_levels: int=10) -> str:
     """获取项目绝对路径
     \n若在项目扫描不到project_file_or_dir参数中提供的文件或文件夹, 或project_file_or_dir为None时项目不存在如下文件或文件夹时会返回`Path.cwd()`
     \n.git
@@ -72,7 +72,7 @@ def get_project_dir(project_file_or_dir: str|Path=None, max_levels: int=10) -> s
     \nREADME.md
     
     Args:
-        project_file_or_dir (str | Path, optional): 项目下的文件或者文件夹, 用于扫描. Defaults to None.
+        project_file_or_dir (str | Path | list, optional): 项目下的文件或者文件夹, 用于扫描, 可以传入多个。传入多个时, 只要存在其中一个文件或文件夹就会返回项目路径. Defaults to None.
         max_levels (int, optional): 最大向上查找层级. Defaults to 10.
 
     Returns:
@@ -82,12 +82,16 @@ def get_project_dir(project_file_or_dir: str|Path=None, max_levels: int=10) -> s
     current = cwd
     for _ in range(max_levels):
         # 检查当前目录是否包含项目标识文件或目录
-        if project_file_or_dir is None:
+        if project_files_or_dirs is None:
             if (current / ".git").exists() or (current / "requirements.txt").exists() or (current / ".gitignore").exists() or (current / "README.md").exists():
                 return current
         else:
-            if (current / project_file_or_dir).exists():
-                return current
+            if isinstance(project_files_or_dirs, list):
+                for project_file_or_dir in project_files_or_dirs:
+                    if (current / project_file_or_dir).exists():
+                        return current
+            elif (current / project_files_or_dirs).exists():
+                    return current
         # 继续向上查找, 到达根目录立刻断开
         if current.parent == current:
             break
