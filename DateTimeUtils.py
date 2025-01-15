@@ -269,6 +269,19 @@ def get_day(days=0, pattern: str = "%Y-%m-%d", transfer_to_str=True) -> str | da
     else:
         return day
 
+def get_week_day(time: str, pattern: str = "%Y-%m-%d") -> int:
+    """判断时间字符串是星期几
+
+    Args:
+        time (str): 时间字符串
+        pattern (str, optional): 输入日期的基准格式. Defaults to "%Y-%m-%d".
+
+    Returns:
+        int: 星期几, 星期一到星期日按时间顺序为: 1, 2, 3, 4, 5, 6, 7
+    """
+    date_obj = datetime.strptime(time, pattern)
+    return date_obj.weekday()+1
+
 def get_month_end_day(month: int, pattern: str = "%Y-%m-%d") -> str:
     """获取某月月底
 
