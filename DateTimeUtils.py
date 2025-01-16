@@ -136,7 +136,7 @@ def end_record_and_caculate(print_message: bool=True, round_index=3, type="s") -
     if print_message:
         time_spend_result = f"{round(s / 60, 3)} min" if 60 * 60 > s > 60  \
             else f"{round(s / 60 / 60, 3)} h" if s > 60 * 60 else f"{round(s, 3)} s"
-        print(f"用时: {time_spend_result}")
+        print(f"Time spent: {time_spend_result}")
     if type == "s":
         return s
     elif type == "min":
@@ -144,7 +144,7 @@ def end_record_and_caculate(print_message: bool=True, round_index=3, type="s") -
     elif type == "h":
         return round(s / 60 / 60, round_index)
     else:
-        raise ValueError(f"类型无法识别, 不能为{type}")
+        raise ValueError(f"Unrecognized type, cannot be {type}")
 
 def caculate_times(start: str, end: str, pattern: str = "%H:%M:%S", return_mode="s", ndigits_number=1) -> float:
     """计算时间差
@@ -175,7 +175,7 @@ def caculate_times(start: str, end: str, pattern: str = "%H:%M:%S", return_mode=
     elif return_mode == "year":
         return round(d.days / 365, ndigits_number)
     else:
-        raise ValueError(f"类型无法识别, 不能为{return_mode}")
+        raise ValueError(f"Unrecognized type, cannot be {return_mode}")
       
 def caculate_timer(func):
     """以装饰器的形式, 计算函数执行的所需时间, 在函数上@该函数即可
@@ -190,7 +190,7 @@ def caculate_timer(func):
         time_spend = time_end - time_start
         time_spend_result = f"{round(time_spend / 60, 3)} min" if 60 * 60 > time_spend > 60  \
             else f"{round(time_spend / 60 / 60, 3)} h" if time_spend > 60 * 60 else f"{round(time_spend, 3)} s"
-        print(f"函数[{func.__name__}] 总耗时: {time_spend_result}")
+        print(f"Function [{func.__name__}] total spent time: {time_spend_result}")
         return result
     return func_wrapper
 
@@ -293,7 +293,7 @@ def get_month_end_day(month: int, pattern: str = "%Y-%m-%d") -> str:
         该月月底, 格式以pattern为基准
     """
     if month < 1 or month > 12:
-        raise Exception(f"输入参数不正确, 日期中没有{month}月")
+        raise Exception(f"Invalid input parameters, there is no month {month}")
     next_month = month + 1 if month != 12 else 1
     next_month_start_day = get_day(pattern=f"%Y-0{next_month}-01") if next_month < 10 else get_day(pattern=f"%Y-{next_month}-01")  # 找到这个月的下一个月月初, 以此减一从而获取这个月月底
     month_end_day = get_day_by_caculate(next_month_start_day)
