@@ -308,6 +308,185 @@ def rename_file(old_file_path: str | Path, new_file_name: str) -> Path:
     path = old_file_path.parent
     return old_file_path.rename(path / new_file_name)
 
+def delete_file(file_path: str | Path, backup_to_dir: str | Path | bool=False, backup_mode: str="R"):
+    """删除一个文件
+
+    Args:
+        file_path (str | Path): 文件源路径
+        backup_to_dir (str | Path | bool, optional): 备份文件夹路径, 如果为False则不备份. Defaults to False.
+        backup_mode (str, optional): 备份模式, 可选参数为{'R'(重命名待删除文件), 'M'(将文件移动到备份的文件夹, 如果备份文件夹不存在则创建)}. Defaults to "R".
+    """
+    file = Path(file_path).resolve() if isinstance(file_path, str) else file_path.resolve()
+    parent_dir = file.parent
+    re_filename = file.name
+    finish_backup = False
+    if backup_to_dir and file.exists():
+        backup_to_dir = Path(backup_to_dir).resolve() if isinstance(backup_to_dir, str) else backup_to_dir.resolve() if isinstance(backup_to_dir, Path) else backup_to_dir
+        # 备份文件夹不存在则创建一个
+        if isinstance(backup_to_dir, Path) and (not backup_to_dir.exists()):
+            os.makedirs(backup_to_dir)
+        # 重命名模式
+        if backup_mode == "R":
+            file_suffix = file.suffix
+            # 参数中输入了确定的备份的文件夹路径
+            if isinstance(backup_to_dir, Path):
+                is_success = False
+                for _ in range(500):
+                    new_file = backup_to_dir / f"{re_filename.replace(file_suffix, '')}_{datetime.now().strftime('%Y%m%d%H%M%S')}_bck{file_suffix}"
+                    if new_file.exists():
+                        time.sleep(1)
+                    else:
+                        is_success = True
+                        break
+                if not is_success:
+                    raise Exception(f"rename timeout, there are too many files with the same name in {backup_to_dir}, please check.")
+                file.rename(new_file)
+            # 没有确定, 在当前文件夹下直接重命名
+            else:
+                is_success = False
+                for _ in range(500):
+                    new_file = parent_dir / f"{re_filename.replace(file_suffix, '')}_{datetime.now().strftime('%Y%m%d%H%M%S')}_bck{file_suffix}"
+                    if new_file.exists():
+                        time.sleep(1)
+                    else:
+                        is_success = True
+                        break
+                if not is_success:
+                    raise Exception(f"rename timeout, there are too many files with the same name in {parent_dir}, please check.")
+                file.rename(new_file)
+        # 移动模式
+        elif backup_mode == "M":
+            # 参数中输入了确定的备份的文件夹路径
+            if isinstance(backup_to_dir, Path):
+                bck_filename = re_filename
+                # 防止在移动时, 文件夹下有相同文件的情况
+                is_success = False
+                for _ in range(500):
+                    try:
+                        shutil.move(file, backup_to_dir / bck_filename)
+                        is_success = True
+                        break
+                    except:
+                        time.sleep(1)
+                        bck_filename = f"{re_filename}_{datetime.now().strftime('%H%M%S')}"
+                if not is_success:
+                    raise Exception(f"move file timeout, there are too many files with the same name in {backup_to_dir}, please check.")
+            # 没有确定, 在当前文件夹下创建一个文件夹并移动进去
+            else:
+                backup_dir = parent_dir / f"{datetime.now().strftime('%Y%m%d')}_delete_backup"
+                if not backup_dir.exists():
+                    os.makedirs(backup_dir)
+                bck_filename = re_filename
+                # 防止在移动时, 文件夹下有相同文件的情况
+                is_success = False
+                for _ in range(500):
+                    try:
+                        shutil.move(file, backup_dir / bck_filename)
+                        is_success = True
+                        break
+                    except:
+                        time.sleep(1)
+                        bck_filename = f"{re_filename}_{datetime.now().strftime('%H%M%S')}"
+                if not is_success:
+                    raise Exception(f"move file timeout, there are too many files with the same name in {backup_to_dir}, please check.")
+        finish_backup = True
+    if file.exists():
+        file.unlink()
+        print("File has been successfully deleted.")
+    elif (not file.exists()) and (not finish_backup):
+        print("The file does not exist, no need to delete.")
+    elif finish_backup:
+        print("The file has been successfully backed up, no need to delete.")
+
+def delete_folder(folder_path: str | Path, backup_to_dir: str | Path | bool=False, backup_mode: str="R"):
+    """删除一个文件夹
+
+    Args:
+        folder_path (str | Path): 文件夹源路径
+        backup_to_dir (str | Path | bool, optional): 备份文件夹路径, 如果为False则不备份. Defaults to False.
+        backup_mode (str, optional): 备份模式, 可选参数为{'R'(重命名待删除文件), 'M'(将文件移动到备份的文件夹, 如果备份文件夹不存在则创建)}. Defaults to "R".
+    """
+    folder = Path(folder_path).resolve() if isinstance(folder_path, str) else folder_path.resolve()
+    parent_dir = folder.parent
+    re_foldername = folder.name
+    finish_backup = False
+    if backup_to_dir and folder.exists():
+        backup_to_dir = Path(backup_to_dir).resolve() if isinstance(backup_to_dir, str) else backup_to_dir.resolve() if isinstance(backup_to_dir, Path) else backup_to_dir
+        # 备份文件夹不存在则创建一个
+        if isinstance(backup_to_dir, Path) and (not backup_to_dir.exists()):
+            os.makedirs(backup_to_dir)
+        # 重命名模式
+        if backup_mode == "R":
+            # 参数中输入了确定的备份的文件夹路径
+            if isinstance(backup_to_dir, Path):
+                is_success = False
+                for _ in range(500):
+                    new_folder = backup_to_dir / f"{re_foldername}_{datetime.now().strftime('%Y%m%d%H%M%S')}_bck"
+                    if new_folder.exists():
+                        time.sleep(1)
+                    else:
+                        is_success = True
+                        break
+                if not is_success:
+                    raise Exception(f"rename timeout, there are too many folders with the same name in {backup_to_dir}, please check.")
+                folder.rename(new_folder)
+            # 没有确定, 在当前文件夹下直接重命名
+            else:
+                is_success = False
+                for _ in range(500):
+                    new_folder = parent_dir / f"{re_foldername}_{datetime.now().strftime('%Y%m%d%H%M%S')}_bck"
+                    if new_folder.exists():
+                        time.sleep(1)
+                    else:
+                        is_success = True
+                        break
+                if not is_success:
+                    raise Exception(f"rename timeout, there are too many folders with the same name in {parent_dir}, please check.")
+                folder.rename(new_folder)
+        # 移动模式
+        elif backup_mode == "M":
+            # 参数中输入了确定的备份的文件夹路径
+            if isinstance(backup_to_dir, Path):
+                bck_filename = re_foldername
+                # 防止在移动时, 文件夹下有相同文件夹名称的情况
+                is_success = False
+                for _ in range(500):
+                    try:
+                        shutil.move(folder, backup_to_dir / bck_filename)
+                        is_success = True
+                        break
+                    except:
+                        time.sleep(1)
+                        bck_filename = f"{re_foldername}_{datetime.now().strftime('%H%M%S')}"
+                if not is_success:
+                    raise Exception(f"move folder timeout, there are too many folders with the same name in {backup_to_dir}, please check.")
+            # 没有确定, 在当前文件夹下创建一个文件夹并移动进去
+            else:
+                backup_dir = parent_dir / f"{datetime.now().strftime('%Y%m%d')}_delete_backup"
+                if not backup_dir.exists():
+                    os.makedirs(backup_dir)
+                bck_filename = re_foldername
+                # 防止在移动时, 文件夹下有相同文件夹名称的情况
+                is_success = False
+                for _ in range(500):
+                    try:
+                        shutil.move(folder, backup_dir / bck_filename)
+                        is_success = True
+                        break
+                    except:
+                        time.sleep(1)
+                        bck_filename = f"{re_foldername}_{datetime.now().strftime('%H%M%S')}"
+                if not is_success:
+                    raise Exception(f"move folder timeout, there are too many folders with the same name in {backup_to_dir}, please check.")
+        finish_backup = True
+    if folder.exists():
+        shutil.rmtree(folder)
+        print("Folder has been successfully deleted.")
+    elif (not folder.exists()) and (not finish_backup):
+        print("The folder does not exist, no need to delete.")
+    elif finish_backup:
+        print("The folder has been successfully backed up, no need to delete.")
+
 def copy_single_file(from_file_path: str | Path, to_dir: str | Path, is_create_to_folder: bool=True):
     """复制单个文件到指定路径
 
