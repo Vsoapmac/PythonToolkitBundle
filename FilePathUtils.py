@@ -1,5 +1,5 @@
 """文件工具类 FilePathUtils"""
-import os, sys, json, time, shutil, hashlib
+import os, sys, json, time, shutil, hashlib, getpass
 from datetime import datetime
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor
@@ -99,6 +99,14 @@ def get_project_dir(project_files_or_dirs: str|Path|list=None, max_levels: int=1
 
     # 如果没有找到标识文件，返回直接返回cwd
     return str(cwd)
+
+def get_user() -> str:
+    """获取系统用户名
+
+    Returns:
+        str: 系统用户名
+    """
+    return getpass.getuser()
 
 def get_file_modify_day(file_path: str | Path, time_format="%Y%m%d") -> str:
     """查看文件修改日期
@@ -255,12 +263,12 @@ def is_path_exists(path: str | Path) -> bool:
     path = Path(path) if isinstance(path, str) else path
     return path.exists()
 
-def read_file(file_path: str | Path, encoding="UTF-8") -> str:
+def read_file(file_path: str | Path, encoding=None, **args) -> str:
     """读取文件
 
     Args:
         file_path (str | Path): 文件路径
-        encoding (str, optional): 文件编码. Defaults to "UTF-8".
+        encoding (str, optional): 文件编码. Defaults to None.
 
     Raises:
         Exception: 文件不存在或不可读则抛出异常
@@ -270,25 +278,25 @@ def read_file(file_path: str | Path, encoding="UTF-8") -> str:
     """
     path = Path(file_path) if isinstance(file_path, str) else file_path
     if path.exists():
-        with path.open(encoding=encoding) as file:
+        with open(path, "r", encoding=encoding, **args) as file:
             if file.readable():
                 return file.read()
             else:
                 raise Exception(f"file {path} is not able to read")
 
-def write_file(file_path: str | Path, content, encoding="UTF-8"):
+def write_file(file_path: str | Path, content, encoding=None, **args):
     """写入文件, 文件不存在则自动创建
 
     Args:
         file_path (str | Path): 文件路径
         content (any): 写入的内容
-        encoding (str, optional): 文件编码. Defaults to "UTF-8".
+        encoding (str, optional): 文件编码. Defaults to None.
 
     Raises:
         Exception: 文件不可写则抛出异常
     """
     path = Path(file_path) if isinstance(file_path, str) else file_path
-    with path.open(mode="w", encoding=encoding) as file:
+    with open(path, "w", encoding=encoding, **args) as file:
         if file.writable():
             file.write(content)
         else:
