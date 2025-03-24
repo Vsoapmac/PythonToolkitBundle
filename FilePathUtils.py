@@ -108,6 +108,14 @@ def get_user() -> str:
     """
     return getpass.getuser()
 
+def get_default_user_download_dir() -> str:
+    """获取系统用户默认下载路径
+
+    Returns:
+        str: 系统用户默认下载路径
+    """
+    return str(Path.home() / "Downloads")
+
 def get_file_modify_day(file_path: str | Path, time_format="%Y%m%d") -> str:
     """查看文件修改日期
 
