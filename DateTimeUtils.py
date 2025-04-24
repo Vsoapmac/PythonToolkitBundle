@@ -4,10 +4,12 @@ from datetime import datetime, timedelta
 
 ACCURACY_TIME = "%Y-%m-%d %H:%M:%S"  # 年 - 月 - 日 时：分：秒
 YEAR_MONTH_DAYS = "%Y-%m-%d"  # 年 - 月 - 日
+YEAR_MONTHABBR_DAYS = "%Y-%b-%d"  # 年 - 月(缩写) - 日
 YYYYmmdd = "%Y%m%d"
 HOUR_MINUTE_SECOND = "%H:%M:%S"  # 时：分：秒
 YEAR = "%Y"  # 年
 MONTH = "%m"  # 月
+MONTH_ABBR = "%b"  # 月份缩写名称, 如: Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec
 WEEK = "%w"  # 周
 DAYS = "%d"  # 日
 HOUR = "%H"  # 时, 24 小时
