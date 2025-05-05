@@ -34,6 +34,18 @@ def path_joint_str(original_path: str | Path, *path_str: str | Path, to_Path: bo
     else:
         return original_path
 
+def get_root(file_path: str) -> str:
+    """获取文件根目录
+
+    Args:
+        file_path (str): 文件路径
+
+    Returns:
+        str: 文件根目录
+    """
+    file = Path(file_path).resolve() if isinstance(file_path, str) else file_path.resolve()
+    return file.anchor
+
 def get_parent(path: str, to_Path: bool=False, is_resolve: bool=True) -> str | Path:
     """获取父路径
 
@@ -62,6 +74,18 @@ def get_parents(path: str, is_resolve: bool=True) -> list[str]:
         ['D:\\test\\test01\\test001', 'D:\\test\\test01', 'D:\\test', 'D:\\']
     """
     return [str(parent) for parent in Path(path).resolve().parents] if is_resolve else [str(parent) for parent in Path(path).parents]
+
+def get_path_symbol(file_path: str) -> str:
+    """获取文件目录符
+
+    Args:
+        file_path (str): 文件路径
+
+    Returns:
+        str: 文件目录符
+    """
+    file = Path(file_path).resolve() if isinstance(file_path, str) else file_path.resolve()
+    return file.root
 
 def get_project_dir(project_files_or_dirs: str|Path|list=None, max_levels: int=10) -> str:
     """获取项目绝对路径
@@ -99,6 +123,14 @@ def get_project_dir(project_files_or_dirs: str|Path|list=None, max_levels: int=1
 
     # 如果没有找到标识文件，返回直接返回cwd
     return str(cwd)
+
+def get_system_info() -> str:
+    """获取系统信息
+
+    Returns:
+        str: 系统信息(win32, darwin, linux等)
+    """
+    return sys.platform
 
 def get_user() -> str:
     """获取系统用户名
@@ -168,6 +200,42 @@ def get_file_size(file_path: str | Path, file_size_type: str="KB", ndigits: int=
         return round(file_size / 1024 / 1024 / 1024 / 1024, ndigits)
     else:
         return round(file_size, ndigits)
+
+def get_file_name(file_path: str | Path) -> str:
+    """获取文件名(不包含后缀, 只是文件名)
+
+    Args:
+        file_path (str | Path): 文件路径
+
+    Returns:
+        str: 文件名
+    """
+    file = Path(file_path).resolve() if isinstance(file_path, str) else file_path.resolve()
+    return file.name.replace(file.suffix, "")
+
+def get_file_full_name(file_path: str | Path) -> str:
+    """获取完整的文件名(包含文件名以及后缀)
+
+    Args:
+        file_path (str | Path): 文件路径
+
+    Returns:
+        str: 文件名
+    """
+    file = Path(file_path).resolve() if isinstance(file_path, str) else file_path.resolve()
+    return file.name
+
+def get_file_suffix(file_path: str | Path) -> str:
+    """获取文件后缀(.xxx格式)
+
+    Args:
+        file_path (str | Path): 文件路径
+
+    Returns:
+        str: 文件后缀
+    """
+    file = Path(file_path).resolve() if isinstance(file_path, str) else file_path.resolve()
+    return file.suffix
 
 def get_file_info(file_path: str | Path, beatiful_print=False) -> dict:
     """获取文件完整信息
