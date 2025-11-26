@@ -1,7 +1,14 @@
 """文件工具类 FilePathUtils"""
-import os, sys, json, time, shutil, hashlib, getpass
-from datetime import datetime
+import os
+import sys
+import json
+import time
+import shutil
+import hashlib 
+import getpass
 from pathlib import Path
+from typing import Iterator
+from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor
 
 
@@ -121,7 +128,7 @@ def get_project_dir(project_files_or_dirs: str|Path|list=None, max_levels: int=1
             break
         current = current.parent
 
-    # 如果没有找到标识文件，返回直接返回cwd
+    # 如果没有找到标识文件, 返回直接返回cwd
     return str(cwd)
 
 def get_system_info() -> str:
@@ -289,6 +296,29 @@ def listdir(folder_path: str | Path) -> list:
         list: 文件夹下的文件(包含文件夹与文件)的列表
     """
     return os.listdir(folder_path)
+
+def walkdir(folder_path: str | Path, topdown: bool=True, onerror=None, followlinks: bool=False) -> Iterator[tuple[str, list[str], list[str]]]:
+    """遍历文件夹, 用法和os.walk()一样
+
+    Args:
+        folder_path (str | Path): 文件夹路径
+        topdown (bool, optional): 如果为True或未指定, 则自顶向下遍历(先父目录后子目录). Defaults to True.
+        onerror (optional): 可选的回调函数, 用于处理遍历过程中发生的异常;如果未提供, 异常会被忽略. Defaults to None.
+        followlinks (bool, optional): 如果为True, 则会遍历符号链接指向的目录(可能导致无限循环). Defaults to False.
+
+    Returns:
+        Iterator: 生成器, 每次产生一个三元组：
+            - root: 当前正在遍历的目录路径(字符串)
+            - dirs: 当前目录中的子目录名称列表(不包含完整路径)
+            - files: 当前目录中的文件名称列表(不包含完整路径)
+        
+    Example:
+        >>> for root, dirs, files in FilePathUtils.walkdir(folder_path):
+        ...     print(root, "consumes ")
+        ...     print(sum(getsize(join(root, name)) for name in files), end=" ")
+        ...     print("bytes in", len(files), "non-directory files")
+    """
+    return os.walk(folder_path, topdown, onerror, followlinks)
 
 def count_folder_files(folder_path: str | Path) -> int:
     """计算文件夹下面所有的文件(不包含子文件夹)
