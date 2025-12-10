@@ -3,7 +3,10 @@
 \npip install beautifulsoup4
 \npip install lxml
 """
-import requests, json, lxml, lxml.html
+import json
+import lxml
+import requests
+import lxml.html
 from bs4 import BeautifulSoup, Tag
 
 
