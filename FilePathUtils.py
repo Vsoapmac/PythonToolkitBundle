@@ -7,6 +7,7 @@ import shutil
 import hashlib 
 import getpass
 from pathlib import Path
+from pathlib import PurePosixPath
 from typing import Iterator
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor
@@ -319,6 +320,26 @@ def walkdir(folder_path: str | Path, topdown: bool=True, onerror=None, followlin
         ...     print("bytes in", len(files), "non-directory files")
     """
     return os.walk(folder_path, topdown, onerror, followlinks)
+
+def caculate_relative_path(base_path: str, target_path: str, normalize_slashes: bool=True) -> str:
+    """计算相对路径
+
+    Args:
+        base_path (str): 以此路径为基准
+        target_path (str): 被计算的路径
+        normalize_slashes (bool, optional): 是否将反斜杠转换为正斜杠. Defaults to True.
+
+    Returns:
+        str: 计算后的target_path的相对路径表示法
+        
+    Example:
+        >>> caculate_relative_path("/usr/local/bin", "/usr/local/A.txt")
+        >>> ../A.txt
+    """
+    result = os.path.relpath(target_path, base_path)
+    if normalize_slashes:
+        result = result.replace("\\", "/")
+    return result
 
 def count_folder_files(folder_path: str | Path) -> int:
     """计算文件夹下面所有的文件(不包含子文件夹)
