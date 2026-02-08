@@ -7,7 +7,6 @@ import shutil
 import hashlib 
 import getpass
 from pathlib import Path
-from pathlib import PurePosixPath
 from typing import Iterator
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor
