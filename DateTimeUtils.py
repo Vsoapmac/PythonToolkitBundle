@@ -108,33 +108,45 @@ def format_second_to_time(second: int|float|None, keep_millisecond: bool=False) 
         total_seconds = total_seconds - (total_seconds % timedelta(seconds=1).total_seconds())
     return str(timedelta(seconds=total_seconds))
 
-def record() -> float:
+def record(global_record: bool=False) -> float:
     """记录当前时间
 
+    Args:
+        global_record (bool, optional): 是否全局记录时间变量. Defaults to False.
+    
     Returns:
         时间浮点
     """
-    global record_time
+    if global_record:
+        global record_time
     record_time = time.time()
     return record_time
 
-def end_record_and_caculate(print_message: bool=True, round_index=3, type="s") -> float:
-    """计算时间差
+def end_record_and_caculate(start_time: float=None, print_message: bool=False, round_index=3, type="s") -> float:
+    """计算时间差, 通常用来记录函数执行所消耗的时间
 
     Args:
-        round_index: 结果位数, 默认保留3位
-        type: 返回类型, 有秒s(默认)、分钟min、小时h
+        start_time (float, optional): 开始时间, 为None则使用record_time(需要record函数开启global_record). Defaults to None.
+        print_message (bool, optional): 是否打印信息. Defaults to False.
+        round_index (int, optional): 结果保留多少位. Defaults to 3.
+        type (str, optional): 返回类型, 有秒s、分钟min、小时h. Defaults to "s".
+
+    Raises:
+        ValueError: type参数错误
 
     Returns:
-        时间差
-
+        float: 时间差
+        
     Examples:
         >>> DateTimeUtils.record()
         >>> print("test")
         >>> DateTimeUtils.end_record_and_caculate()
-        用时: 0.001 s
+        Time spent: 0.001 s
     """
-    s = round(time.time() - record_time, round_index)
+    if start_time is None:
+        s = round(time.time() - record_time, round_index)
+    else:
+        s = round(time.time() - start_time, round_index)
     if print_message:
         time_spend_result = f"{round(s / 60, 3)} min" if 60 * 60 > s > 60  \
             else f"{round(s / 60 / 60, 3)} h" if s > 60 * 60 else f"{round(s, 3)} s"
@@ -149,7 +161,7 @@ def end_record_and_caculate(print_message: bool=True, round_index=3, type="s") -
         raise ValueError(f"Unrecognized type, cannot be {type}")
 
 def caculate_times(start: str, end: str, pattern: str = "%H:%M:%S", return_mode="s", ndigits_number=1) -> float:
-    """计算时间差
+    """计算两段时间的间隔
 
     Args:
         start: 开始的准确时间, 格式根据形参pattern的格式输入
