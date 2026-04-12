@@ -146,7 +146,7 @@ class SqliteUtils:
             print(f"参数: {params}")
             raise
     
-    def executemany(self, sql: str, params_list: List[Union[Tuple, Dict]]) -> Cursor:
+    def execute_many(self, sql: str, params_list: List[Union[Tuple, Dict]]) -> Cursor:
         """批量执行 SQL 语句
         
         使用同一 SQL 语句，批量执行多组参数。
@@ -166,7 +166,7 @@ class SqliteUtils:
             >>> db.connect()
             >>> sql = "INSERT INTO users (name) VALUES (?)"
             >>> params_list = [('Alice',), ('Bob',), ('Charlie',)]
-            >>> db.executemany(sql, params_list)
+            >>> db.execute_many(sql, params_list)
             >>> db.disconnect()
         """
         if not self.conn or not self.cursor:
