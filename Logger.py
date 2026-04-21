@@ -1,75 +1,66 @@
-import logging, sys, os
+# -*- coding: utf-8 -*-
+"""
+日志类Logger.py
+若要使用, 则使用pip install loguru 安装loguru库
+"""
+import sys
+from loguru import logger
 
+def remove(handler_id: int=None):
+    """移除配置
 
-class Logger:
-    """log设置类"""
-    logger = None
+    Args:
+        handler_id (int, optional): handler id. Defaults to None.
+    """
+    logger.remove(handler_id)
 
-    def __init__(self, log_name=None, log_level=logging.INFO):
-        """
-        初始化logger
+def add_config(sink=None, 
+            level: str | int='INFO', 
+            format: str="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | pid: <yellow>{process}</yellow> | tid: <magenta>{thread}</magenta> | <cyan>{name}:{function}:{line}</cyan> | <level>{level}</level> | {message}", 
+            filter=None,
+            backtrace=False, 
+            diagnose=False, 
+            enqueue=False, 
+            serialize=False, 
+            colorize=True,
+            **kwargs):
+    """增加配置, 配置参考loguru.logger.add()
 
-        Args:
-            log_name: 自定义log名称。若log名称为None则使用根logger, 此时在任意模块中使用logging.info也可以调用该类的设置。默认None
-            log_level: 全局log等级, 默认INFO。
-        """
-        self.logger = logging.getLogger(log_name)
-        self.logger.setLevel(log_level)
+    Args:
+        sink (Any): 日志消息的输出位置, 可以是文件路径、标准输出(sys.stdout)、标准错误(sys.stderr, 默认)或其他自定义的输出位置
+        level (str, optional): 记录级别. Defaults to 'INFO'.
+        format (str, optional): 格式字符串. Defaults to "{time} {level} {message}".
+        filter (Any, optional): 过滤器. Defaults to None.
+        backtrace (bool, optional): 是否记录回溯信息. Defaults to False.
+        diagnose (bool, optional): 是否在处理程序内部出现错误时记录诊断信息. Defaults to False.
+        enqueue (bool, optional): 是否放入队列中处理, 通常应用在多线程中避免阻塞. Defaults to False.
+        serialize (bool, optional): 是否进行序列化处理. Defaults to False.
+        colorize (bool, optional): 是否进行着色处理. Defaults to True.
+    """
+    logger.add(
+        sink=sys.stdout if sink is None else sink,
+        level=level,
+        format=format,
+        filter=filter,
+        backtrace=backtrace,
+        diagnose=diagnose,
+        enqueue=enqueue,
+        serialize=serialize,
+        colorize=colorize,
+        **kwargs
+    )
+    
+def get_logger(user_opt: bool=True, **kwargs):
+    """获取logger
 
-    def set_logger_formatter(self,formatter: str = '%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',
-                             dateformatter: str = '%Y-%m-%d %H:%M:%S'):
-        """
-        设置log格式
+    Args:
+        user_opt (bool, optional): 是否使用logger.opt. Defaults to True.
+        **kwargs: opt配置, 详情参考logger.opt. Defaults to None.
 
-        Args:
-            formatter: 打印格式, 默认%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s
-            dateformatter: 日期格式, 默认%Y%m%d %H:%M:%S
-
-        Returns:
-            logging.Formatter
-        """
-        return logging.Formatter(formatter, datefmt=dateformatter)
-
-    def set_write_log(self, file_path: str, formatter: logging.Formatter, level=logging.INFO):
-        """
-        设置log写入文件
-
-        Args:
-            file_path: 日志路径
-            formatter: 打印格式
-            level: 写入日志的level, 默认INFO
-        """
-        file_handler = logging.FileHandler(file_path)
-        file_handler.setFormatter(formatter)
-        file_handler.setLevel(level)
-        self.logger.addHandler(file_handler)
-
-    def set_print_log(self, formatter: logging.Formatter, level=logging.INFO):
-        """
-        设置打印log文本
-
-        Args:
-            formatter: 打印的格式
-            level: 日志的level, 默认INFO
-        """
-        console_handler = logging.StreamHandler(sys.stdout)
-        console_handler.setFormatter(formatter)  # %(asctime)s
-        console_handler.setLevel(level)
-        self.logger.addHandler(console_handler)
-
-    def log_file_helper(self, folder_path: str, file_name: str):
-        """
-        自动创建文件夹与日志文件
-
-        Args:
-            folder_path: 文件夹路径
-            file_name: 日志文件名
-        """
-        # 文件夹不存在则创建
-        if not os.path.exists(folder_path):
-            os.makedirs(folder_path)
-        full_file_name = os.path.join(folder_path, file_name)
-        # 文件不存在则创建
-        if not os.path.exists(full_file_name):
-            with open(full_file_name, 'w', encoding="utf-8") as f:
-                f.close()
+    Returns:
+        logger: logger
+    """
+    if user_opt:
+        return logger.opt(kwargs)
+    else:
+        return logger
