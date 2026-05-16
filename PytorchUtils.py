@@ -43,7 +43,7 @@ def train_epoch(model: nn.Module, loader: DataLoader, criterion, optimizer: Adam
         loss.backward()
         optimizer.step()
         
-        # 累加损失, 将损失值乘以批量大小。这样做的原因是为了在计算总损失时，考虑到每个批次中的样本数量。如果直接累加损失值，那么总损失会偏向于样本数量较大的批次。
+        # 累加损失, 将损失值乘以批量大小。这样做的原因是为了在计算总损失时, 考虑到每个批次中的样本数量。如果直接累加损失值, 那么总损失会偏向于样本数量较大的批次。
         total_loss += loss.item() * inputs.size(0)
         
         # 计算准确率
@@ -73,7 +73,7 @@ def validate_epoch(model: nn.Module, loader: DataLoader, criterion, device: devi
     running_loss = 0.0
     correct = 0
     total = 0
-    # 使用torch.no_grad()上下文, 禁用梯度计算, 减少内存使用并提高计算速度，因为在评估过程中不需要计算梯度。
+    # 使用torch.no_grad()上下文, 禁用梯度计算, 减少内存使用并提高计算速度, 因为在评估过程中不需要计算梯度。
     with torch.no_grad():
         for inputs, labels in loader:
             inputs, labels = inputs.to(device), labels.to(device)

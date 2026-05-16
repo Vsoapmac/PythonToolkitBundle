@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# MySQL 数据库操作工具类，提供连接管理、CRUD、事务、批量操作等功能
+# MySQL 数据库操作工具类, 提供连接管理、CRUD、事务、批量操作等功能
 # ------------ common ------------
 from typing import (
     Any,
@@ -28,7 +28,7 @@ class MySQLUtils:
         >>> db.close()
     """
     _pool: Optional[PooledDB] = None  # 数据库连接池
-    _connection: Optional = None  # 单次连接（不使用连接池时）
+    _connection: Optional = None  # 单次连接(不使用连接池时)
 
     def __init__(self, host: str = "localhost", port: int = 3306,
                  user: str = "root", password: str = "",
@@ -38,15 +38,15 @@ class MySQLUtils:
         """初始化 MySQL 连接池
 
         Args:
-            host (str): 数据库主机地址，默认为 localhost
-            port (int): 端口号，默认为 3306
-            user (str): 数据库用户名，默认为 root
+            host (str): 数据库主机地址, 默认为 localhost
+            port (int): 端口号, 默认为 3306
+            user (str): 数据库用户名, 默认为 root
             password (str): 数据库密码
             database (str): 数据库名
-            charset (str): 字符集，默认为 utf8mb4
-            min_connections (int): 连接池最小连接数，默认为 2
-            max_connections (int): 连接池最大连接数，默认为 10
-            timeout (int): 连接超时时间（秒），默认为 30
+            charset (str): 字符集, 默认为 utf8mb4
+            min_connections (int): 连接池最小连接数, 默认为 2
+            max_connections (int): 连接池最大连接数, 默认为 10
+            timeout (int): 连接超时时间(秒), 默认为 30
             **kwargs: 传递给 pymysql 的其他参数
 
         Example:
@@ -81,7 +81,7 @@ class MySQLUtils:
         return self._pool.connection()
 
     def close(self):
-        """关闭连接池，释放所有连接资源"""
+        """关闭连接池, 释放所有连接资源"""
         if self._pool:
             self._pool.close()
             self._pool = None
@@ -91,7 +91,7 @@ class MySQLUtils:
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        """退出上下文管理器，自动关闭连接池"""
+        """退出上下文管理器, 自动关闭连接池"""
         self.close()
 
     # endregion ---------------------------- 连接管理 ----------------------------
@@ -100,12 +100,12 @@ class MySQLUtils:
 
     def select(self, sql: str, params: Optional[Union[List, Tuple, Dict]] = None,
                size: int = -1) -> List[Dict[str, Any]]:
-        """执行查询语句，返回结果列表
+        """执行查询语句, 返回结果列表
 
         Args:
-            sql (str): SQL 查询语句，使用 %s 作为占位符
+            sql (str): SQL 查询语句, 使用 %s 作为占位符
             params (Optional[Union[List, Tuple, Dict]]): 查询参数
-            size (int): 返回行数，-1 表示返回全部，默认为 -1
+            size (int): 返回行数, -1 表示返回全部, 默认为 -1
 
         Returns:
             List[Dict[str, Any]]: 查询结果字典列表
@@ -135,7 +135,7 @@ class MySQLUtils:
             params (Optional[Union[List, Tuple, Dict]]): 查询参数
 
         Returns:
-            Optional[Dict[str, Any]]: 单条记录字典，无结果时返回 None
+            Optional[Dict[str, Any]]: 单条记录字典, 无结果时返回 None
 
         Example:
             >>> db = MySQLUtils(host="localhost", user="root", password="123456", database="test")
@@ -155,7 +155,7 @@ class MySQLUtils:
     # region ---------------------------- 写入操作 ----------------------------
 
     def execute(self, sql: str, params: Optional[Union[List, Tuple, Dict]] = None) -> int:
-        """执行单条 SQL（INSERT/UPDATE/DELETE）
+        """执行单条 SQL(INSERT/UPDATE/DELETE)
 
         Args:
             sql (str): SQL 语句
@@ -219,7 +219,7 @@ class MySQLUtils:
             data (Dict[str, Any]): 字段名到值的字典
 
         Returns:
-            int: 自增 ID（如果表有自增主键）
+            int: 自增 ID(如果表有自增主键)
 
         Example:
             >>> db = MySQLUtils(host="localhost", user="root", password="123456", database="test")
@@ -280,7 +280,7 @@ class MySQLUtils:
         Args:
             table (str): 表名
             data (Dict[str, Any]): 要更新的字段字典
-            condition (str): WHERE 条件，使用 %s 占位
+            condition (str): WHERE 条件, 使用 %s 占位
             condition_params (Optional[Union[List, Tuple]]): 条件参数
 
         Returns:
@@ -306,7 +306,7 @@ class MySQLUtils:
 
         Args:
             table (str): 表名
-            condition (str): WHERE 条件，使用 %s 占位
+            condition (str): WHERE 条件, 使用 %s 占位
             condition_params (Optional[Union[List, Tuple]]): 条件参数
 
         Returns:
@@ -325,10 +325,10 @@ class MySQLUtils:
     # region ---------------------------- 事务操作 ----------------------------
 
     def transaction(self) -> "_MySQLTransaction":
-        """开始一个事务，返回事务对象
+        """开始一个事务, 返回事务对象
 
         Returns:
-            _MySQLTransaction: 事务对象，支持 commit/rollback
+            _MySQLTransaction: 事务对象, 支持 commit/rollback
 
         Example:
             >>> db = MySQLUtils(host="localhost", user="root", password="123456", database="test")
@@ -374,7 +374,7 @@ class MySQLUtils:
 
 
 class _MySQLTransaction:
-    """MySQL 事务对象，由 MySQLUtils.transaction() 创建"""
+    """MySQL 事务对象, 由 MySQLUtils.transaction() 创建"""
     _conn = None  # 事务专用连接
 
     def __init__(self, conn):
