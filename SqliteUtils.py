@@ -20,10 +20,10 @@ from sqlite3 import Connection, Cursor
 class SqliteUtils:
     """SQLite 数据库工具类
     
-    该类封装了 SQLite 数据库的常用操作，包括：
+    该类封装了 SQLite 数据库的常用操作, 包括：
     1. 数据库连接管理
     2. SQL 语句执行
-    3. 数据查询（单条、多条、全部）
+    3. 数据查询(单条、多条、全部)
     4. 数据插入、更新、删除
     5. 事务管理
     6. 表结构操作
@@ -38,7 +38,7 @@ class SqliteUtils:
         """初始化 SqliteUtils 实例
         
         Args:
-            db_path (str): SQLite 数据库文件路径，如果文件不存在会自动创建
+            db_path (str): SQLite 数据库文件路径, 如果文件不存在会自动创建
             
         Example:
             >>> db = SqliteUtils('test.db')
@@ -52,7 +52,7 @@ class SqliteUtils:
     def connect(self) -> None:
         """连接到 SQLite 数据库
         
-        如果数据库文件不存在，会自动创建。连接成功后，会设置游标对象。
+        如果数据库文件不存在, 会自动创建。连接成功后, 会设置游标对象。
         
         Raises:
             sqlite3.Error: 数据库连接失败时抛出异常
@@ -85,7 +85,7 @@ class SqliteUtils:
     def disconnect(self) -> None:
         """断开数据库连接
         
-        关闭游标和连接，释放资源。
+        关闭游标和连接, 释放资源。
         
         Example:
             >>> db = SqliteUtils('test.db')
@@ -106,11 +106,11 @@ class SqliteUtils:
     def execute(self, sql: str, params: Union[Tuple, Dict, None] = None) -> Cursor:
         """执行 SQL 语句
         
-        执行任意 SQL 语句（查询或修改），支持参数化查询防止 SQL 注入。
+        执行任意 SQL 语句(查询或修改), 支持参数化查询防止 SQL 注入。
         
         Args:
             sql (str): 要执行的 SQL 语句
-            params (Union[Tuple, Dict, None]): SQL 参数，可以是元组或字典
+            params (Union[Tuple, Dict, None]): SQL 参数, 可以是元组或字典
             
         Returns:
             Cursor: 执行后的游标对象
@@ -124,13 +124,13 @@ class SqliteUtils:
             >>> # 创建表
             >>> sql = "CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT)"
             >>> db.execute(sql)
-            >>> # 插入数据（参数化查询）
+            >>> # 插入数据(参数化查询)
             >>> sql = "INSERT INTO users (name) VALUES (?)"
             >>> db.execute(sql, ('Alice',))
             >>> db.disconnect()
         """
         if not self.conn or not self.cursor:
-            raise sqlite3.Error("数据库未连接，请先调用 connect() 方法")
+            raise sqlite3.Error("数据库未连接, 请先调用 connect() 方法")
         
         try:
             if params:
@@ -149,11 +149,11 @@ class SqliteUtils:
     def execute_many(self, sql: str, params_list: List[Union[Tuple, Dict]]) -> Cursor:
         """批量执行 SQL 语句
         
-        使用同一 SQL 语句，批量执行多组参数。
+        使用同一 SQL 语句, 批量执行多组参数。
         
         Args:
             sql (str): 要执行的 SQL 语句
-            params_list (List[Union[Tuple, Dict]]): 参数列表，每个元素是一组参数
+            params_list (List[Union[Tuple, Dict]]): 参数列表, 每个元素是一组参数
             
         Returns:
             Cursor: 执行后的游标对象
@@ -170,7 +170,7 @@ class SqliteUtils:
             >>> db.disconnect()
         """
         if not self.conn or not self.cursor:
-            raise sqlite3.Error("数据库未连接，请先调用 connect() 方法")
+            raise sqlite3.Error("数据库未连接, 请先调用 connect() 方法")
         
         try:
             self.cursor.executemany(sql, params_list)
@@ -185,14 +185,14 @@ class SqliteUtils:
     def fetch_one(self, sql: str, params: Union[Tuple, Dict, None] = None) -> Optional[Tuple]:
         """查询单条记录
         
-        执行查询语句，返回第一条记录。
+        执行查询语句, 返回第一条记录。
         
         Args:
             sql (str): 查询 SQL 语句
             params (Union[Tuple, Dict, None]): SQL 参数
             
         Returns:
-            Optional[Tuple]: 第一条记录，如果没有结果则返回 None
+            Optional[Tuple]: 第一条记录, 如果没有结果则返回 None
             
         Example:
             >>> db = SqliteUtils('test.db')
@@ -209,7 +209,7 @@ class SqliteUtils:
     def fetch_all(self, sql: str, params: Union[Tuple, Dict, None] = None) -> List[Tuple]:
         """查询所有记录
         
-        执行查询语句，返回所有记录。
+        执行查询语句, 返回所有记录。
         
         Args:
             sql (str): 查询 SQL 语句
@@ -233,7 +233,7 @@ class SqliteUtils:
     def fetch_many(self, sql: str, size: int, params: Union[Tuple, Dict, None] = None) -> List[Tuple]:
         """查询多条记录
         
-        执行查询语句，返回指定数量的记录。
+        执行查询语句, 返回指定数量的记录。
         
         Args:
             sql (str): 查询 SQL 语句
@@ -262,10 +262,10 @@ class SqliteUtils:
         
         Args:
             table (str): 表名
-            data (Dict[str, Any]): 要插入的数据，键为列名，值为数据
+            data (Dict[str, Any]): 要插入的数据, 键为列名, 值为数据
             
         Returns:
-            int: 插入行的 ID（如果表有自增主键）
+            int: 插入行的 ID(如果表有自增主键)
             
         Example:
             >>> db = SqliteUtils('test.db')
@@ -329,8 +329,8 @@ class SqliteUtils:
         
         Args:
             table (str): 表名
-            data (Dict[str, Any]): 要更新的数据，键为列名，值为新数据
-            where (str): WHERE 条件语句（不包含 WHERE 关键字）
+            data (Dict[str, Any]): 要更新的数据, 键为列名, 值为新数据
+            where (str): WHERE 条件语句(不包含 WHERE 关键字)
             where_params (Union[Tuple, Dict, None]): WHERE 条件参数
             
         Returns:
@@ -354,7 +354,7 @@ class SqliteUtils:
             if isinstance(where_params, tuple):
                 params = params + where_params
             else:
-                # 如果是字典，需要特殊处理（这里简化处理）
+                # 如果是字典, 需要特殊处理(这里简化处理)
                 params = params + tuple(where_params.values())
         
         # 执行更新
@@ -370,7 +370,7 @@ class SqliteUtils:
         
         Args:
             table (str): 表名
-            where (str): WHERE 条件语句（不包含 WHERE 关键字）
+            where (str): WHERE 条件语句(不包含 WHERE 关键字)
             where_params (Union[Tuple, Dict, None]): WHERE 条件参数
             
         Returns:
@@ -399,7 +399,7 @@ class SqliteUtils:
             table_name (str): 表名
             
         Returns:
-            bool: 如果表存在返回 True，否则返回 False
+            bool: 如果表存在返回 True, 否则返回 False
             
         Example:
             >>> db = SqliteUtils('test.db')
@@ -459,7 +459,7 @@ class SqliteUtils:
     def commit_transaction(self) -> None:
         """提交事务
         
-        提交当前事务，使所有更改生效。
+        提交当前事务, 使所有更改生效。
         """
         if self.conn:
             self.conn.commit()
@@ -467,7 +467,7 @@ class SqliteUtils:
     def rollback_transaction(self) -> None:
         """回滚事务
         
-        回滚当前事务，撤销所有未提交的更改。
+        回滚当前事务, 撤销所有未提交的更改。
         """
         if self.conn:
             self.conn.rollback()
@@ -475,7 +475,7 @@ class SqliteUtils:
     def __enter__(self):
         """上下文管理器入口
         
-        支持 with 语句，自动连接数据库。
+        支持 with 语句, 自动连接数据库。
         
         Example:
             >>> with SqliteUtils('test.db') as db:
@@ -487,7 +487,7 @@ class SqliteUtils:
     def __exit__(self, exc_type, exc_val, exc_tb):
         """上下文管理器出口
         
-        自动提交或回滚事务，并断开数据库连接。
+        自动提交或回滚事务, 并断开数据库连接。
         """
         if exc_type:
             # 发生异常时回滚

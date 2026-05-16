@@ -259,7 +259,7 @@ class SqlalchemyToolkit:
     
     Attributes:
         session (Session): SQLAlchemy Session 对象
-        engine (Engine): SQLAlchemy Engine 对象（如果提供）
+        engine (Engine): SQLAlchemy Engine 对象(如果提供)
     
     Example:
         >>> from utils.SqlalchemyToolkit import create_sqlite_engine, SqlalchemyToolkit
@@ -331,7 +331,7 @@ class SqlalchemyToolkit:
         """关闭 Session
         
         Args:
-            close_all (bool, optional): 是否关闭所有 Session（用于线程池连接）。
+            close_all (bool, optional): 是否关闭所有 Session(用于线程池连接)。
                                         Defaults to False.
         
         Example:
@@ -373,7 +373,7 @@ class SqlalchemyToolkit:
             bean (declarative_base): 数据表对象实体类
         
         Returns:
-            declarative_base: 插入后的实体对象（包含生成的ID等）
+            declarative_base: 插入后的实体对象(包含生成的ID等)
             
         Raises:
             sqlalchemy.exc.SQLAlchemyError: 数据库操作失败时抛出
@@ -464,7 +464,7 @@ class SqlalchemyToolkit:
         """根据条件删除多条数据
         
         Args:
-            bean_class (declarative_base): 数据表对象实体类（类本身, 不是实例）
+            bean_class (declarative_base): 数据表对象实体类(类本身, 不是实例)
             *conditions: 过滤条件, 使用 SQLAlchemy 的 filter 语法
         
         Returns:
@@ -486,7 +486,7 @@ class SqlalchemyToolkit:
     def update(self, bean: declarative_base) -> bool:
         """更新单条数据
         
-        注意：此方法要求 bean 对象已经存在于 Session 中（即通过查询获取的对象）。
+        注意：此方法要求 bean 对象已经存在于 Session 中(即通过查询获取的对象)。
         如果要更新新创建的对象, 请先调用 session.add() 或使用 update_by_condition 方法。
         
         Args:
@@ -515,7 +515,7 @@ class SqlalchemyToolkit:
         """根据条件更新多条数据
         
         Args:
-            bean_class (declarative_base): 数据表对象实体类（类本身, 不是实例）
+            bean_class (declarative_base): 数据表对象实体类(类本身, 不是实例)
             updates (Dict): 要更新的字段和值, 例如: {'name': 'New Name', 'age': 30}
             *conditions: 过滤条件, 使用 SQLAlchemy 的 filter 语法
         
@@ -536,10 +536,10 @@ class SqlalchemyToolkit:
             raise Exception(f"根据条件更新数据失败: {str(e)}")
     
     def select_all(self, bean_class: declarative_base, *conditions) -> List[declarative_base]:
-        """查询所有数据（可带条件）
+        """查询所有数据(可带条件)
         
         Args:
-            bean_class (declarative_base): 数据表对象实体类（类本身, 不是实例）
+            bean_class (declarative_base): 数据表对象实体类(类本身, 不是实例)
             *conditions: 过滤条件, 使用 SQLAlchemy 的 filter 语法
         
         Returns:
@@ -560,10 +560,10 @@ class SqlalchemyToolkit:
         return query.all()
     
     def select_first(self, bean_class: declarative_base, *conditions) -> Optional[declarative_base]:
-        """查询第一条数据（可带条件）
+        """查询第一条数据(可带条件)
         
         Args:
-            bean_class (declarative_base): 数据表对象实体类（类本身, 不是实例）
+            bean_class (declarative_base): 数据表对象实体类(类本身, 不是实例)
             *conditions: 过滤条件, 使用 SQLAlchemy 的 filter 语法
         
         Returns:
@@ -587,7 +587,7 @@ class SqlalchemyToolkit:
         """根据ID查询数据
         
         Args:
-            bean_class (declarative_base): 数据表对象实体类（类本身, 不是实例）
+            bean_class (declarative_base): 数据表对象实体类(类本身, 不是实例)
             id_value (Any): 主键ID值
         
         Returns:
@@ -601,10 +601,10 @@ class SqlalchemyToolkit:
         return self.session.query(bean_class).get(id_value)
     
     def count_datas(self, bean_class: declarative_base, *conditions) -> int:
-        """统计数据条数（可带条件）
+        """统计数据条数(可带条件)
         
         Args:
-            bean_class (declarative_base): 数据表对象实体类（类本身, 不是实例）
+            bean_class (declarative_base): 数据表对象实体类(类本身, 不是实例)
             *conditions: 过滤条件, 使用 SQLAlchemy 的 filter 语法
         
         Returns:
@@ -629,7 +629,7 @@ class SqlalchemyToolkit:
         """分页查询数据
         
         Args:
-            bean_class (declarative_base): 数据表对象实体类（类本身, 不是实例）
+            bean_class (declarative_base): 数据表对象实体类(类本身, 不是实例)
             page (int, optional): 页码, 从1开始。Defaults to 1.
             per_page (int, optional): 每页条数。Defaults to 20.
             *conditions: 过滤条件, 使用 SQLAlchemy 的 filter 语法
@@ -664,7 +664,7 @@ class SqlalchemyToolkit:
         """检查是否存在满足条件的数据
         
         Args:
-            bean_class (declarative_base): 数据表对象实体类（类本身, 不是实例）
+            bean_class (declarative_base): 数据表对象实体类(类本身, 不是实例)
             *conditions: 过滤条件, 使用 SQLAlchemy 的 filter 语法
         
         Returns:
@@ -679,7 +679,7 @@ class SqlalchemyToolkit:
         return self.session.query(query.exists()).scalar()
     
     def execute_raw_sql(self, sql: str, params: Dict = None, return_result: bool = True) -> Any:
-        """执行原生 SQL 语句（返回原始结果）
+        """执行原生 SQL 语句(返回原始结果)
         
         Args:
             sql (str): SQL 语句
@@ -695,7 +695,7 @@ class SqlalchemyToolkit:
             >>> for row in result:
             >>>     print(row)
             >>> 
-            >>> # 执行更新（不返回结果）
+            >>> # 执行更新(不返回结果)
             >>> toolkit.execute_raw_sql("UPDATE users SET status = 'active' WHERE id = :id", 
             >>>                        {"id": 1}, return_result=False)
         """
@@ -748,10 +748,10 @@ class SqlalchemyToolkit:
         return inspector.get_columns(table_name)
     
     def create_table(self, bean_class: declarative_base) -> bool:
-        """创建表（如果不存在）
+        """创建表(如果不存在)
         
         Args:
-            bean_class (declarative_base): 数据表对象实体类（类本身, 不是实例）
+            bean_class (declarative_base): 数据表对象实体类(类本身, 不是实例)
         
         Returns:
             bool: 创建成功返回 True, 否则返回 False
@@ -767,10 +767,10 @@ class SqlalchemyToolkit:
             raise Exception(f"创建表失败: {str(e)}")
     
     def drop_table(self, bean_class: declarative_base) -> bool:
-        """删除表（如果存在）
+        """删除表(如果存在)
         
         Args:
-            bean_class (declarative_base): 数据表对象实体类（类本身, 不是实例）
+            bean_class (declarative_base): 数据表对象实体类(类本身, 不是实例)
         
         Returns:
             bool: 删除成功返回 True, 否则返回 False
@@ -812,12 +812,12 @@ class SqlalchemyToolkit:
         return TransactionContext(self)
     
     def bulk_insert(self, bean_class: declarative_base, data_list: List[Dict]) -> int:
-        """批量插入数据（高性能）
+        """批量插入数据(高性能)
         
         使用 SQLAlchemy 的 bulk_insert_mappings 方法, 性能优于 insert_all。
         
         Args:
-            bean_class (declarative_base): 数据表对象实体类（类本身, 不是实例）
+            bean_class (declarative_base): 数据表对象实体类(类本身, 不是实例)
             data_list (List[Dict]): 数据列表, 每个字典对应一行数据
         
         Returns:
@@ -842,12 +842,12 @@ class SqlalchemyToolkit:
     
     def bulk_update(self, bean_class: declarative_base, data_list: List[Dict], 
                    update_keys: List[str]) -> int:
-        """批量更新数据（高性能）
+        """批量更新数据(高性能)
         
         使用 SQLAlchemy 的 bulk_update_mappings 方法, 性能优于 update_by_condition。
         
         Args:
-            bean_class (declarative_base): 数据表对象实体类（类本身, 不是实例）
+            bean_class (declarative_base): 数据表对象实体类(类本身, 不是实例)
             data_list (List[Dict]): 数据列表, 每个字典对应一行数据, 必须包含主键
             update_keys (List[str]): 要更新的字段名列表
         
@@ -876,7 +876,7 @@ class SqlalchemyToolkit:
         提供更灵活的查询构建能力。
         
         Args:
-            bean_class (declarative_base): 数据表对象实体类（类本身, 不是实例）
+            bean_class (declarative_base): 数据表对象实体类(类本身, 不是实例)
         
         Returns:
             Query: SQLAlchemy Query 对象
@@ -889,7 +889,7 @@ class SqlalchemyToolkit:
         return self.session.query(bean_class)
     
     def sqlite_only_vacuum(self) -> bool:
-        """SQLite 专用：执行 VACUUM 命令（压缩数据库文件）
+        """SQLite 专用：执行 VACUUM 命令(压缩数据库文件)
         
         仅适用于 SQLite 数据库, 用于回收未使用的空间, 优化数据库性能。
         
@@ -958,7 +958,7 @@ class SqlalchemyToolkit:
             raise Exception(f"备份数据库失败: {str(e)}")
     
     def mysql_only_show_tables(self) -> List[str]:
-        """MySQL 专用：显示所有表（使用 SHOW TABLES 命令）
+        """MySQL 专用：显示所有表(使用 SHOW TABLES 命令)
         
         仅适用于 MySQL 数据库, 使用原生 SQL 命令显示所有表。
         
@@ -983,7 +983,7 @@ class SqlalchemyToolkit:
             raise Exception(f"执行 SHOW TABLES 命令失败: {str(e)}")
     
     def postgresql_only_show_tables(self) -> List[str]:
-        """PostgreSQL 专用：显示所有表（使用 \\dt 等效命令）
+        """PostgreSQL 专用：显示所有表(使用 \\dt 等效命令)
         
         仅适用于 PostgreSQL 数据库, 使用原生 SQL 命令显示所有表。
         

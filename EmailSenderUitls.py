@@ -112,7 +112,7 @@ def send_email_with_embedded_images(sender: str, sender_password: str, receiver_
     message.attach(msg_alternative)
     msg_alternative.attach(MIMEText(content_html, 'html', 'utf-8'))
     
-    # 为每个图片创建一个 MIME image 对象，并将其添加到邮件中
+    # 为每个图片创建一个 MIME image 对象, 并将其添加到邮件中
     for image_path in image_paths:
         with open(image_path, 'rb') as f:
             img_data = f.read()

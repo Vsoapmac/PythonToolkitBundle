@@ -14,8 +14,8 @@ class OutlookUtils:
         "CC": "[CC]",  # 抄送
         "BCC": "[BCC]",  # 密送
         "Size": "[Size]",  # 邮件大小
-        "Importance": "[Importance]",  # 重要性（高、低）
-        # 敏感性（Normal、Personal、Private、Confidential）
+        "Importance": "[Importance]",  # 重要性(高、低)
+        # 敏感性(Normal、Personal、Private、Confidential)
         "Sensitivity": "[Sensitivity]",
         "Date": "[Date]",  # 发送日期
         "ReceivedTime": "[ReceivedTime]",  # 接收日期和时间
@@ -29,8 +29,8 @@ class OutlookUtils:
         "BCC": "BCC",  # 密送
         "Size": "Size",  # 邮件大小
         "Body": "Body",  # 正文
-        "Importance": "Importance",  # 重要性（高、低）
-        "Sensitivity": "Sensitivity",  # 敏感性（Normal、Personal、Private、Confidential）
+        "Importance": "Importance",  # 重要性(高、低)
+        "Sensitivity": "Sensitivity",  # 敏感性(Normal、Personal、Private、Confidential)
         "ReceivedTime": "ReceivedTime",  # 接收日期和时间
         "Attachments": "Attachments",  # 附件
     }

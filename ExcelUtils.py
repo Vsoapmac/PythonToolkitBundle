@@ -125,7 +125,7 @@ class OpenpyxlAdapter:
         return col_values[0: len(col_values)-5] if none_counter >= 5 else col_values
         
     def insert_value(self, column: str, row: int, value, auto_save: bool=True):
-        """插入数据，也可以更新某一单元格的数据
+        """插入数据, 也可以更新某一单元格的数据
 
         Args:
             column (str): 列, 用A、B、C等表示
@@ -156,7 +156,7 @@ class OpenpyxlAdapter:
             self.book.save(self.excel_path)
     
     def insert_values(self, column: str, values: list, insert_mode: str="append", start_row: int=1, auto_save: bool=True):
-        """插入多个数据，也可以更新某一单元格的数据
+        """插入多个数据, 也可以更新某一单元格的数据
 
         Args:
             column (str): 列, 用A、B、C等表示
@@ -413,7 +413,7 @@ class XlutilsAdapter:
         return self.sheet.col_values(get_column_index(column)-1)
     
     def insert_value(self, column: str, row: int, value, auto_save: bool=True):
-        """插入数据，也可以更新某一单元格的数据
+        """插入数据, 也可以更新某一单元格的数据
 
         Args:
             column (str): 列, 用A、B、C等表示
@@ -466,7 +466,7 @@ class XlutilsAdapter:
             self.sheet = self.book.sheet_by_name(self.sheet_name)
         
     def insert_values(self, column: str, values: list, insert_mode: str="append", start_row: int=1, auto_save: bool=True):
-        """插入多个数据，也可以更新某一单元格的数据
+        """插入多个数据, 也可以更新某一单元格的数据
 
         Args:
             column (str): 列, 用A、B、C等表示
@@ -587,11 +587,11 @@ class XlwingsAdapter:
         """
         row_data = []
         none_counter = 0
-        # 从第一列开始迭代，直到找到一个空单元格为止
+        # 从第一列开始迭代, 直到找到一个空单元格为止
         column_letter = 'A'
         for _ in range(16384):
             cell_value = self.sheet.range(f"{column_letter}{row}").value
-            row_data.append(cell_value)  # 否则，将值添加到行数据中
+            row_data.append(cell_value)  # 否则, 将值添加到行数据中
             if cell_value:
                 none_counter = 0
             elif none_counter >= 5:
@@ -624,7 +624,7 @@ class XlwingsAdapter:
         return col_value_list[0: len(col_value_list)-5] if none_counter >= 5 else col_value_list
         
     def insert_value(self, column: str, row: int, value, auto_save: bool=True):
-        """插入数据，也可以更新某一单元格的数据
+        """插入数据, 也可以更新某一单元格的数据
 
         Args:
             column (str): 列, 用A、B、C等表示
@@ -657,7 +657,7 @@ class XlwingsAdapter:
             self.book.save()
     
     def insert_values(self, column: str, values: list, insert_mode: str="append", start_row: int=1, auto_save: bool=True):
-        """插入多个数据，也可以更新某一单元格的数据
+        """插入多个数据, 也可以更新某一单元格的数据
 
         Args:
             column (str): 列, 用A、B、C等表示

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# 基于 Polars 的数据处理工具类，提供接近 pandas 的 API 体验，同时利用 Polars 的高性能
+# 基于 Polars 的数据处理工具类, 提供接近 pandas 的 API 体验, 同时利用 Polars 的高性能
 # ------------ common ------------
 from pathlib import Path
 from typing import (
@@ -20,10 +20,10 @@ from polars.series import Series as PolarsSeries
 
 
 class PolarsUtils:
-    """基于 Polars 的数据处理工具类，API 设计贴近 pandas 的使用习惯
+    """基于 Polars 的数据处理工具类, API 设计贴近 pandas 的使用习惯
 
-    在底层使用 Polars 的高性能 DataFrame 引擎，但对外暴露的方法名和行为
-    尽量与 pandas 保持一致，降低迁移成本。
+    在底层使用 Polars 的高性能 DataFrame 引擎, 但对外暴露的方法名和行为
+    尽量与 pandas 保持一致, 降低迁移成本。
 
     Usage:
         >>> df = PolarsUtils.read_csv("data.csv")
@@ -37,7 +37,7 @@ class PolarsUtils:
         """初始化 PolarsUtils
 
         Args:
-            data (Optional[Any]): 初始化数据，支持 Polars DataFrame、PolarsUtils 对象或 None
+            data (Optional[Any]): 初始化数据, 支持 Polars DataFrame、PolarsUtils 对象或 None
 
         Example:
             >>> df = PolarsUtils()
@@ -52,7 +52,7 @@ class PolarsUtils:
         else:
             self._data = pl.DataFrame(data)
 
-    # region ---------------------------- 属性访问（pandas 兼容） ----------------------------
+    # region ---------------------------- 属性访问(pandas 兼容) ----------------------------
 
     @property
     def shape(self) -> Tuple[int, int]:
@@ -188,13 +188,13 @@ class PolarsUtils:
         else:
             self._data = self._data.with_columns(pl.Series(key, value))
 
-    # endregion ---------------------------- 属性访问（pandas 兼容） ----------------------------
+    # endregion ---------------------------- 属性访问(pandas 兼容) ----------------------------
 
-    # region ---------------------------- I/O 类方法（类似 pandas.read_*） ----------------------------
+    # region ---------------------------- I/O 类方法(类似 pandas.read_*) ----------------------------
 
     @classmethod
     def read_csv(cls, file_path: Union[str, Path], **kwargs) -> "PolarsUtils":
-        """读取 CSV 文件（类似 pandas.read_csv）
+        """读取 CSV 文件(类似 pandas.read_csv)
 
         Args:
             file_path (Union[str, Path]): CSV 文件路径
@@ -212,11 +212,11 @@ class PolarsUtils:
 
     @classmethod
     def read_excel(cls, file_path: Union[str, Path], sheet_name: Optional[str] = None, **kwargs) -> "PolarsUtils":
-        """读取 Excel 文件（类似 pandas.read_excel）
+        """读取 Excel 文件(类似 pandas.read_excel)
 
         Args:
             file_path (Union[str, Path]): Excel 文件路径
-            sheet_name (Optional[str]): 工作表名称，为 None 时读取第一个工作表
+            sheet_name (Optional[str]): 工作表名称, 为 None 时读取第一个工作表
             **kwargs: 传递给 polars.read_excel 的额外参数
 
         Returns:
@@ -265,15 +265,15 @@ class PolarsUtils:
         """
         return cls(pl.read_json(file_path, **kwargs))
 
-    # endregion ---------------------------- I/O 类方法（类似 pandas.read_*） ----------------------------
+    # endregion ---------------------------- I/O 类方法(类似 pandas.read_*) ----------------------------
 
     # region ---------------------------- 数据预览方法 ----------------------------
 
     def head(self, n: int = 5) -> "PolarsUtils":
-        """返回前 n 行数据（类似 pandas.DataFrame.head）
+        """返回前 n 行数据(类似 pandas.DataFrame.head)
 
         Args:
-            n (int): 返回的行数，默认为 5
+            n (int): 返回的行数, 默认为 5
 
         Returns:
             PolarsUtils: 包含前 n 行数据的 PolarsUtils 对象
@@ -286,10 +286,10 @@ class PolarsUtils:
         return PolarsUtils(self._data.head(n))
 
     def tail(self, n: int = 5) -> "PolarsUtils":
-        """返回后 n 行数据（类似 pandas.DataFrame.tail）
+        """返回后 n 行数据(类似 pandas.DataFrame.tail)
 
         Args:
-            n (int): 返回的行数，默认为 5
+            n (int): 返回的行数, 默认为 5
 
         Returns:
             PolarsUtils: 包含后 n 行数据的 PolarsUtils 对象
@@ -302,11 +302,11 @@ class PolarsUtils:
         return PolarsUtils(self._data.tail(n))
 
     def sample(self, n: Optional[int] = None, frac: Optional[float] = None, seed: Optional[int] = None) -> "PolarsUtils":
-        """随机采样行数据（类似 pandas.DataFrame.sample）
+        """随机采样行数据(类似 pandas.DataFrame.sample)
 
         Args:
             n (Optional[int]): 指定采样行数
-            frac (Optional[float]): 指定采样比例，与 n 互斥
+            frac (Optional[float]): 指定采样比例, 与 n 互斥
             seed (Optional[int]): 随机种子
 
         Returns:
@@ -322,7 +322,7 @@ class PolarsUtils:
         return PolarsUtils(self._data.sample(n=n, seed=seed))
 
     def describe(self) -> "PolarsUtils":
-        """返回数值列的统计摘要（类似 pandas.DataFrame.describe）
+        """返回数值列的统计摘要(类似 pandas.DataFrame.describe)
 
         Returns:
             PolarsUtils: 统计摘要结果
@@ -336,7 +336,7 @@ class PolarsUtils:
         return PolarsUtils(self._data.describe())
 
     def info(self) -> str:
-        """打印 DataFrame 的简要信息（类似 pandas.DataFrame.info）
+        """打印 DataFrame 的简要信息(类似 pandas.DataFrame.info)
 
         Returns:
             str: 信息字符串
@@ -360,10 +360,10 @@ class PolarsUtils:
 
     # endregion ---------------------------- 数据预览方法 ----------------------------
 
-    # region ---------------------------- 数据操作（pandas 兼容） ----------------------------
+    # region ---------------------------- 数据操作(pandas 兼容) ----------------------------
 
     def rename(self, mapper: Dict[str, str]) -> "PolarsUtils":
-        """重命名列（类似 pandas.DataFrame.rename）
+        """重命名列(类似 pandas.DataFrame.rename)
 
         Args:
             mapper (Dict[str, str]): 旧列名到新列名的映射
@@ -379,7 +379,7 @@ class PolarsUtils:
         return PolarsUtils(self._data.rename(mapper))
 
     def drop(self, columns: Union[str, List[str]]) -> "PolarsUtils":
-        """删除指定列（类似 pandas.DataFrame.drop）
+        """删除指定列(类似 pandas.DataFrame.drop)
 
         Args:
             columns (Union[str, List[str]]): 要删除的列名或列名列表
@@ -397,7 +397,7 @@ class PolarsUtils:
         return PolarsUtils(self._data.drop(columns))
 
     def fillna(self, value: Any) -> "PolarsUtils":
-        """填充空值（类似 pandas.DataFrame.fillna）
+        """填充空值(类似 pandas.DataFrame.fillna)
 
         Args:
             value (Any): 用于填充空值的值
@@ -414,7 +414,7 @@ class PolarsUtils:
         return PolarsUtils(self._data.fill_null(value))
 
     def dropna(self, subset: Optional[Union[str, List[str]]] = None) -> "PolarsUtils":
-        """删除包含空值的行（类似 pandas.DataFrame.dropna）
+        """删除包含空值的行(类似 pandas.DataFrame.dropna)
 
         Args:
             subset (Optional[Union[str, List[str]]]): 检查空值的列子集
@@ -435,11 +435,11 @@ class PolarsUtils:
         return PolarsUtils(self._data.drop_nulls())
 
     def sort_values(self, by: Union[str, List[str]], ascending: Union[bool, List[bool]] = True) -> "PolarsUtils":
-        """按指定列排序（类似 pandas.DataFrame.sort_values）
+        """按指定列排序(类似 pandas.DataFrame.sort_values)
 
         Args:
             by (Union[str, List[str]]): 排序依据的列名
-            ascending (Union[bool, List[bool]]): 升序或降序，默认为 True
+            ascending (Union[bool, List[bool]]): 升序或降序, 默认为 True
 
         Returns:
             PolarsUtils: 排序后的结果
@@ -461,10 +461,10 @@ class PolarsUtils:
         return PolarsUtils(result)
 
     def query(self, expression: str) -> "PolarsUtils":
-        """使用 Polars 表达式语法过滤数据（类似 pandas.DataFrame.query 但使用 Polars 语法）
+        """使用 Polars 表达式语法过滤数据(类似 pandas.DataFrame.query 但使用 Polars 语法)
 
         Args:
-            expression (str): Polars 表达式字符串，如 "pl.col('age') > 18"
+            expression (str): Polars 表达式字符串, 如 "pl.col('age') > 18"
 
         Returns:
             PolarsUtils: 过滤后的结果
@@ -492,18 +492,18 @@ class PolarsUtils:
         """
         return PolarsUtils(self._data.clone())
 
-    # endregion ---------------------------- 数据操作（pandas 兼容） ----------------------------
+    # endregion ---------------------------- 数据操作(pandas 兼容) ----------------------------
 
     # region ---------------------------- 分组与聚合 ----------------------------
 
     def groupby(self, by: Union[str, List[str]]) -> "_GroupBy":
-        """按指定列分组（类似 pandas.DataFrame.groupby）
+        """按指定列分组(类似 pandas.DataFrame.groupby)
 
         Args:
             by (Union[str, List[str]]): 分组依据的列名
 
         Returns:
-            _GroupBy: 分组对象，支持 .agg() 操作
+            _GroupBy: 分组对象, 支持 .agg() 操作
 
         Example:
             >>> df = PolarsUtils({"city": ["BJ", "SH", "BJ"], "score": [80, 90, 85]})
@@ -515,13 +515,13 @@ class PolarsUtils:
 
     def pivot(self, index: Union[str, List[str]], columns: Union[str, List[str]],
               values: Union[str, List[str]], agg: str = "first") -> "PolarsUtils":
-        """数据透视（类似 pandas.DataFrame.pivot / pivot_table）
+        """数据透视(类似 pandas.DataFrame.pivot / pivot_table)
 
         Args:
             index (Union[str, List[str]]): 行索引列
             columns (Union[str, List[str]]): 列索引列
             values (Union[str, List[str]]): 值列
-            agg (str): 聚合函数名，默认为 "first"
+            agg (str): 聚合函数名, 默认为 "first"
 
         Returns:
             PolarsUtils: 透视结果
@@ -538,13 +538,13 @@ class PolarsUtils:
 
     def melt(self, id_vars: Union[str, List[str]], value_vars: Union[str, List[str]],
              var_name: str = "variable", value_name: str = "value") -> "PolarsUtils":
-        """将宽表转为长表（类似 pandas.melt）
+        """将宽表转为长表(类似 pandas.melt)
 
         Args:
             id_vars (Union[str, List[str]]): 标识变量列
             value_vars (Union[str, List[str]]): 值变量列
-            var_name (str): 变量名列名，默认为 "variable"
-            value_name (str): 值列名，默认为 "value"
+            var_name (str): 变量名列名, 默认为 "variable"
+            value_name (str): 值列名, 默认为 "value"
 
         Returns:
             PolarsUtils: 转换后的长表
@@ -567,13 +567,13 @@ class PolarsUtils:
     def merge(self, right: "PolarsUtils", on: Optional[Union[str, List[str]]] = None,
               how: Literal["inner", "left", "outer", "cross"] = "inner",
               suffixes: Tuple[str, str] = ("_x", "_y")) -> "PolarsUtils":
-        """合并两个 DataFrame（类似 pandas.DataFrame.merge）
+        """合并两个 DataFrame(类似 pandas.DataFrame.merge)
 
         Args:
             right (PolarsUtils): 右侧 DataFrame
             on (Optional[Union[str, List[str]]]): 连接键列名
-            how (str): 连接方式，可选 inner/left/outer/cross，默认为 inner
-            suffixes (Tuple[str, str]): 重名列后缀，默认为 ("_x", "_y")
+            how (str): 连接方式, 可选 inner/left/outer/cross, 默认为 inner
+            suffixes (Tuple[str, str]): 重名列后缀, 默认为 ("_x", "_y")
 
         Returns:
             PolarsUtils: 合并结果
@@ -589,7 +589,7 @@ class PolarsUtils:
         return PolarsUtils(self._data.join(right_df, on=on, how=how, suffix=suffixes[1]))
 
     def concat(self, others: List["PolarsUtils"]) -> "PolarsUtils":
-        """纵向拼接多个 DataFrame（类似 pandas.concat）
+        """纵向拼接多个 DataFrame(类似 pandas.concat)
 
         Args:
             others (List[PolarsUtils]): 其他 PolarsUtils 对象列表
@@ -611,10 +611,10 @@ class PolarsUtils:
     # region ---------------------------- 输出方法 ----------------------------
 
     def to_dict(self, as_series: bool = False) -> Dict[str, Any]:
-        """将 DataFrame 转为字典（类似 pandas.DataFrame.to_dict）
+        """将 DataFrame 转为字典(类似 pandas.DataFrame.to_dict)
 
         Args:
-            as_series (bool): 是否返回 Series 字典，默认为 False（返回列表字典）
+            as_series (bool): 是否返回 Series 字典, 默认为 False(返回列表字典)
 
         Returns:
             Dict[str, Any]: 字典形式的数据
@@ -628,6 +628,19 @@ class PolarsUtils:
             return {col: self._data[col] for col in self._data.columns}
         return self._data.to_dict(as_series=False)
 
+    def to_dicts(self) -> List[Dict]:
+        """将 DataFrame 转为字典列表(类似 pandas.DataFrame.to_dict)
+
+        Returns:
+            List[Dict]: 字典列表形式的数据
+
+        Example:
+            >>> df = PolarsUtils({"a": [1, 2]})
+            >>> df.to_dicts()
+            [{'a': 1}, {'a': 2}]
+        """
+        return self._data.to_dicts()
+    
     def to_csv(self, file_path: Union[str, Path], **kwargs):
         """导出为 CSV 文件
 
@@ -642,11 +655,11 @@ class PolarsUtils:
         self._data.write_csv(file_path, **kwargs)
 
     def to_excel(self, file_path: Union[str, Path], sheet_name: str = "Sheet1"):
-        """导出为 Excel 文件（需安装 xlsxwriter 或 openpyxl）
+        """导出为 Excel 文件(需安装 xlsxwriter 或 openpyxl)
 
         Args:
             file_path (Union[str, Path]): 输出路径
-            sheet_name (str): 工作表名称，默认为 "Sheet1"
+            sheet_name (str): 工作表名称, 默认为 "Sheet1"
 
         Example:
             >>> df = PolarsUtils({"a": [1, 2]})
@@ -687,11 +700,11 @@ class PolarsUtils:
     # region ---------------------------- 窗口与行操作 ----------------------------
 
     def apply(self, func, axis: int = 0, *args, **kwargs) -> "PolarsUtils":
-        """对每列或每行应用函数（类似 pandas.DataFrame.apply）
+        """对每列或每行应用函数(类似 pandas.DataFrame.apply)
 
         Args:
             func: 应用的函数
-            axis (int): 0 表示对每列应用，1 表示对每行应用
+            axis (int): 0 表示对每列应用, 1 表示对每行应用
             *args: 传递给 func 的额外位置参数
             **kwargs: 传递给 func 的额外关键字参数
 
@@ -712,7 +725,7 @@ class PolarsUtils:
             return PolarsUtils({"result": results})
 
     def unique(self, subset: Optional[Union[str, List[str]]] = None) -> "PolarsUtils":
-        """返回唯一值行（类似 pandas.DataFrame.drop_duplicates）
+        """返回唯一值行(类似 pandas.DataFrame.drop_duplicates)
 
         Args:
             subset (Optional[Union[str, List[str]]]): 检查唯一性的列子集
@@ -751,7 +764,7 @@ class PolarsUtils:
     # endregion ---------------------------- 窗口与行操作 ----------------------------
 
     def pipe(self, func, *args, **kwargs) -> Any:
-        """支持链式调用（类似 pandas.DataFrame.pipe）
+        """支持链式调用(类似 pandas.DataFrame.pipe)
 
         Args:
             func: 对 DataFrame 进行变换的函数
@@ -771,7 +784,7 @@ class PolarsUtils:
 
 
 class _GroupBy:
-    """分组对象，由 PolarsUtils.groupby 返回，支持链式聚合操作"""
+    """分组对象, 由 PolarsUtils.groupby 返回, 支持链式聚合操作"""
     _data: PolarsDataFrame  # 原始 DataFrame
     _by: Union[str, List[str]]  # 分组列名
 
@@ -789,7 +802,7 @@ class _GroupBy:
         """执行聚合操作
 
         Args:
-            aggregations (Dict[str, str]): 列名到聚合函数名的映射，
+            aggregations (Dict[str, str]): 列名到聚合函数名的映射, 
                 支持 sum/mean/count/min/max/std/var/first/last/median
 
         Returns:

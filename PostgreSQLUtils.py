@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# PostgreSQL 数据库操作工具类，提供连接管理、CRUD、事务、批量操作等功能
+# PostgreSQL 数据库操作工具类, 提供连接管理、CRUD、事务、批量操作等功能
 # ------------ common ------------
 from typing import (
     Any,
@@ -36,13 +36,13 @@ class PostgreSQLUtils:
         """初始化 PostgreSQL 连接池
 
         Args:
-            host (str): 数据库主机地址，默认为 localhost
-            port (int): 端口号，默认为 5432
-            user (str): 数据库用户名，默认为 postgres
+            host (str): 数据库主机地址, 默认为 localhost
+            port (int): 端口号, 默认为 5432
+            user (str): 数据库用户名, 默认为 postgres
             password (str): 数据库密码
             database (str): 数据库名
-            min_connections (int): 连接池最小连接数，默认为 2
-            max_connections (int): 连接池最大连接数，默认为 10
+            min_connections (int): 连接池最小连接数, 默认为 2
+            max_connections (int): 连接池最大连接数, 默认为 10
             **kwargs: 传递给 psycopg2 的其他参数
 
         Example:
@@ -81,7 +81,7 @@ class PostgreSQLUtils:
         self._pool.putconn(conn)
 
     def close(self):
-        """关闭连接池，释放所有连接资源"""
+        """关闭连接池, 释放所有连接资源"""
         if self._pool:
             self._pool.closeall()
             self._pool = None
@@ -91,7 +91,7 @@ class PostgreSQLUtils:
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        """退出上下文管理器，自动关闭连接池"""
+        """退出上下文管理器, 自动关闭连接池"""
         self.close()
 
     # endregion ---------------------------- 连接管理 ----------------------------
@@ -100,12 +100,12 @@ class PostgreSQLUtils:
 
     def select(self, sql: str, params: Optional[Union[List, Tuple, Dict]] = None,
                size: int = -1) -> List[Dict[str, Any]]:
-        """执行查询语句，返回结果列表
+        """执行查询语句, 返回结果列表
 
         Args:
-            sql (str): SQL 查询语句，使用 %s 作为占位符
+            sql (str): SQL 查询语句, 使用 %s 作为占位符
             params (Optional[Union[List, Tuple, Dict]]): 查询参数
-            size (int): 返回行数，-1 表示返回全部，默认为 -1
+            size (int): 返回行数, -1 表示返回全部, 默认为 -1
 
         Returns:
             List[Dict[str, Any]]: 查询结果字典列表
@@ -135,7 +135,7 @@ class PostgreSQLUtils:
             params (Optional[Union[List, Tuple, Dict]]): 查询参数
 
         Returns:
-            Optional[Dict[str, Any]]: 单条记录字典，无结果时返回 None
+            Optional[Dict[str, Any]]: 单条记录字典, 无结果时返回 None
 
         Example:
             >>> db = PostgreSQLUtils(host="localhost", user="postgres", password="123456", database="test")
@@ -156,7 +156,7 @@ class PostgreSQLUtils:
     # region ---------------------------- 写入操作 ----------------------------
 
     def execute(self, sql: str, params: Optional[Union[List, Tuple, Dict]] = None) -> int:
-        """执行单条 SQL（INSERT/UPDATE/DELETE）
+        """执行单条 SQL(INSERT/UPDATE/DELETE)
 
         Args:
             sql (str): SQL 语句
@@ -220,7 +220,7 @@ class PostgreSQLUtils:
             data (Dict[str, Any]): 字段名到值的字典
 
         Returns:
-            int: 自增 ID（RETURNING id）
+            int: 自增 ID(RETURNING id)
 
         Example:
             >>> db = PostgreSQLUtils(host="localhost", user="postgres", password="123456", database="test")
@@ -281,7 +281,7 @@ class PostgreSQLUtils:
         Args:
             table (str): 表名
             data (Dict[str, Any]): 要更新的字段字典
-            condition (str): WHERE 条件，使用 %s 占位
+            condition (str): WHERE 条件, 使用 %s 占位
             condition_params (Optional[Union[List, Tuple]]): 条件参数
 
         Returns:
@@ -307,7 +307,7 @@ class PostgreSQLUtils:
 
         Args:
             table (str): 表名
-            condition (str): WHERE 条件，使用 %s 占位
+            condition (str): WHERE 条件, 使用 %s 占位
             condition_params (Optional[Union[List, Tuple]]): 条件参数
 
         Returns:
@@ -321,10 +321,10 @@ class PostgreSQLUtils:
     # region ---------------------------- 事务操作 ----------------------------
 
     def transaction(self) -> "_PostgreSQLTransaction":
-        """开始一个事务，返回事务对象
+        """开始一个事务, 返回事务对象
 
         Returns:
-            _PostgreSQLTransaction: 事务对象，支持 commit/rollback
+            _PostgreSQLTransaction: 事务对象, 支持 commit/rollback
         """
         conn = self.get_connection()
         conn.autocommit = False
@@ -365,7 +365,7 @@ class PostgreSQLUtils:
 
 
 class _PostgreSQLTransaction:
-    """PostgreSQL 事务对象，由 PostgreSQLUtils.transaction() 创建"""
+    """PostgreSQL 事务对象, 由 PostgreSQLUtils.transaction() 创建"""
     _conn = None  # 事务专用连接
     _pool_ref = None  # 连接池引用
 

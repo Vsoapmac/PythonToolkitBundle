@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# SQL Server 数据库操作工具类，提供连接管理、CRUD、事务、批量操作等功能
+# SQL Server 数据库操作工具类, 提供连接管理、CRUD、事务、批量操作等功能
 # ------------ common ------------
 from typing import (
     Any,
@@ -40,13 +40,13 @@ class SQLServerUtils:
         """初始化 SQL Server 连接
 
         Args:
-            host (str): 数据库主机地址，默认为 localhost
-            port (int): 端口号，默认为 1433
-            user (str): 数据库用户名，默认为 sa
+            host (str): 数据库主机地址, 默认为 localhost
+            port (int): 端口号, 默认为 1433
+            user (str): 数据库用户名, 默认为 sa
             password (str): 数据库密码
             database (str): 数据库名
-            charset (str): 字符集，默认为 utf8
-            autocommit (bool): 是否自动提交，默认为 True
+            charset (str): 字符集, 默认为 utf8
+            autocommit (bool): 是否自动提交, 默认为 True
             **kwargs: 传递给 pymssql.connect 的其他参数
 
         Example:
@@ -101,7 +101,7 @@ class SQLServerUtils:
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        """退出上下文管理器，自动关闭连接"""
+        """退出上下文管理器, 自动关闭连接"""
         self.close()
 
     # endregion ---------------------------- 连接管理 ----------------------------
@@ -110,13 +110,13 @@ class SQLServerUtils:
 
     def select(self, sql: str, params: Optional[Union[List, Tuple, Dict]] = None,
                size: int = -1, as_dict: bool = True) -> List[Union[Dict[str, Any], Tuple]]:
-        """执行查询语句，返回结果列表
+        """执行查询语句, 返回结果列表
 
         Args:
-            sql (str): SQL 查询语句，使用 %d 或 %s 作为占位符
+            sql (str): SQL 查询语句, 使用 %d 或 %s 作为占位符
             params (Optional[Union[List, Tuple, Dict]]): 查询参数
-            size (int): 返回行数，-1 表示返回全部，默认为 -1
-            as_dict (bool): 是否以字典形式返回，默认为 True
+            size (int): 返回行数, -1 表示返回全部, 默认为 -1
+            as_dict (bool): 是否以字典形式返回, 默认为 True
 
         Returns:
             List[Union[Dict[str, Any], Tuple]]: 查询结果
@@ -142,10 +142,10 @@ class SQLServerUtils:
         Args:
             sql (str): SQL 查询语句
             params (Optional[Union[List, Tuple, Dict]]): 查询参数
-            as_dict (bool): 是否以字典形式返回，默认为 True
+            as_dict (bool): 是否以字典形式返回, 默认为 True
 
         Returns:
-            Optional[Union[Dict[str, Any], Tuple]]: 单条记录，无结果时返回 None
+            Optional[Union[Dict[str, Any], Tuple]]: 单条记录, 无结果时返回 None
 
         Example:
             >>> db = SQLServerUtils(host="localhost", user="sa", password="123456", database="test")
@@ -162,7 +162,7 @@ class SQLServerUtils:
     # region ---------------------------- 写入操作 ----------------------------
 
     def execute(self, sql: str, params: Optional[Union[List, Tuple, Dict]] = None) -> int:
-        """执行单条 SQL（INSERT/UPDATE/DELETE）
+        """执行单条 SQL(INSERT/UPDATE/DELETE)
 
         Args:
             sql (str): SQL 语句
@@ -210,14 +210,14 @@ class SQLServerUtils:
         return total
 
     def insert(self, table: str, data: Dict[str, Any]) -> Optional[int]:
-        """插入单条记录，返回自增 ID（如有）
+        """插入单条记录, 返回自增 ID(如有)
 
         Args:
             table (str): 表名
             data (Dict[str, Any]): 字段名到值的字典
 
         Returns:
-            Optional[int]: 自增 ID，如果没有自增 ID 则返回 None
+            Optional[int]: 自增 ID, 如果没有自增 ID 则返回 None
 
         Example:
             >>> db = SQLServerUtils(host="localhost", user="sa", password="123456", database="test")
@@ -273,7 +273,7 @@ class SQLServerUtils:
         Args:
             table (str): 表名
             data (Dict[str, Any]): 要更新的字段字典
-            condition (str): WHERE 条件，使用 %s/%d 占位
+            condition (str): WHERE 条件, 使用 %s/%d 占位
             condition_params (Optional[Union[List, Tuple]]): 条件参数
 
         Returns:
@@ -308,7 +308,7 @@ class SQLServerUtils:
     # region ---------------------------- 事务操作 ----------------------------
 
     def begin_transaction(self):
-        """手动开始事务（关闭自动提交）"""
+        """手动开始事务(关闭自动提交)"""
         conn = self.get_connection()
         conn.autocommit(False)
 

@@ -137,7 +137,7 @@ class DrissionPageToolKit:
         """关闭浏览器
 
         Args:
-            timeout (float, optional): 等待浏览器关闭超时时间（秒）. Defaults to 5.
+            timeout (float, optional): 等待浏览器关闭超时时间(秒). Defaults to 5.
             force (bool, optional): 是否立刻强制终止进程. Defaults to False.
             del_data (bool, optional): 是否删除用户文件夹. Defaults to False.
         """

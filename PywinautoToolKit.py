@@ -338,7 +338,7 @@ class PyautoguiToolKit:
 
         Args:
             x (int | float | tuple): x轴, 对应屏幕的位置。也可以是向左(对于负值)或向右(对于正值)移动鼠标光标的位置。如果是一个元组, 则用于x和y坐标
-            y (int | float): y轴, 对应屏幕的位置。也可以是向上（对于负值）或向下（对于正值）移动鼠标光标的位置
+            y (int | float): y轴, 对应屏幕的位置。也可以是向上(对于负值)或向下(对于正值)移动鼠标光标的位置
             duration (float, optional): 指定移动鼠标光标到指定坐标所需的时间。如果时间为0, 则鼠标光标会立刻移动到对应位置. Defaults to 0.
             button (str, optional): 在鼠标点击时, 使用鼠标上面的哪个按钮, 可选为{LEFT, MIDDLE, RIGHT, PRIMARY, SECONDARY}. Defaults to "PRIMARY".
         """
@@ -402,7 +402,7 @@ class PyautoguiToolKit:
         Args:
             image_path (str): 图像路径
             grayscale (bool, optional): 是否使用灰度模式进行匹配, 如果设置为True, 则以灰度模式进行图像匹配, 这样可以提高匹配速度, 但可能稍微降低准确性. Defaults to False.
-            region (tuple, optional): 指定一个矩形区域，在该区域内搜索图像, 输入为一个四元组, 格式为(x1, y1, x2, y2), (x1, y1)代表的是区域框的左上角, (x2, y2)代表的是区域框的右下角. Defaults to None.
+            region (tuple, optional): 指定一个矩形区域, 在该区域内搜索图像, 输入为一个四元组, 格式为(x1, y1, x2, y2), (x1, y1)代表的是区域框的左上角, (x2, y2)代表的是区域框的右下角. Defaults to None.
             confidence (float, optional): 指定匹配时所需的置信度水平。取值范围是 0 到 1, 其中 1 表示完全匹配. Defaults to 0.8.
 
         Returns:
@@ -421,7 +421,7 @@ class PyautoguiToolKit:
         Args:
             image_path (str): 图像路径
             grayscale (bool, optional): 是否使用灰度模式进行匹配, 如果设置为True, 则以灰度模式进行图像匹配, 这样可以提高匹配速度, 但可能稍微降低准确性. Defaults to False.
-            region (tuple, optional): 指定一个矩形区域，在该区域内搜索图像, 输入为一个四元组, 格式为(x1, y1, x2, y2), (x1, y1)代表的是区域框的左上角, (x2, y2)代表的是区域框的右下角. Defaults to None.
+            region (tuple, optional): 指定一个矩形区域, 在该区域内搜索图像, 输入为一个四元组, 格式为(x1, y1, x2, y2), (x1, y1)代表的是区域框的左上角, (x2, y2)代表的是区域框的右下角. Defaults to None.
             confidence (float, optional): 指定匹配时所需的置信度水平。取值范围是 0 到 1, 其中 1 表示完全匹配. Defaults to 0.8.
             click_times (int, optional): 点击的次数. Defaults to 1.
             interval (int, optional): 每一次点击之间间隔的时间, 单位为秒. Defaults to 0.

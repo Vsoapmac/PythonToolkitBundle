@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# 基于 Playwright 的浏览器自动化工具类，封装常用浏览器操作，支持 Chrome/Edge/Firefox
+# 基于 Playwright 的浏览器自动化工具类, 封装常用浏览器操作, 支持 Chrome/Edge/Firefox
 # ------------ common ------------
 from pathlib import Path
 from typing import (
@@ -31,7 +31,7 @@ By = Literal
 
 
 class BrowserOptionsSetter:
-    """浏览器启动参数设置器，支持 Chromium、Firefox 和 WebKit"""
+    """浏览器启动参数设置器, 支持 Chromium、Firefox 和 WebKit"""
     _launch_options: Dict[str, Any] = {}  # 启动参数字典
     _context_options: Dict[str, Any] = {}  # 上下文参数字典
 
@@ -39,7 +39,7 @@ class BrowserOptionsSetter:
         """初始化浏览器参数设置器
 
         Args:
-            browser_type (str): 浏览器类型，可选 chromium/firefox/webkit，默认为 chromium
+            browser_type (str): 浏览器类型, 可选 chromium/firefox/webkit, 默认为 chromium
 
         Example:
             >>> opts = BrowserOptionsSetter("chromium")
@@ -81,7 +81,7 @@ class BrowserOptionsSetter:
         """设置无头模式
 
         Args:
-            headless (bool): 是否启用无头模式，默认为 True
+            headless (bool): 是否启用无头模式, 默认为 True
 
         Example:
             >>> opts = BrowserOptionsSetter()
@@ -93,8 +93,8 @@ class BrowserOptionsSetter:
         """设置浏览器窗口尺寸
 
         Args:
-            width (int): 宽度（像素）
-            height (int): 高度（像素）
+            width (int): 宽度(像素)
+            height (int): 高度(像素)
 
         Example:
             >>> opts = BrowserOptionsSetter()
@@ -118,7 +118,7 @@ class BrowserOptionsSetter:
         """设置浏览器语言区域
 
         Args:
-            locale (str): 语言区域代码，默认为 zh-CN
+            locale (str): 语言区域代码, 默认为 zh-CN
 
         Example:
             >>> opts = BrowserOptionsSetter()
@@ -130,7 +130,7 @@ class BrowserOptionsSetter:
         """忽略 HTTPS 证书错误
 
         Args:
-            ignore (bool): 是否忽略 HTTPS 错误，默认为 True
+            ignore (bool): 是否忽略 HTTPS 错误, 默认为 True
 
         Example:
             >>> opts = BrowserOptionsSetter()
@@ -142,7 +142,7 @@ class BrowserOptionsSetter:
         """禁用图片加载以提升性能
 
         Args:
-            disable (bool): 是否禁用图片，默认为 True
+            disable (bool): 是否禁用图片, 默认为 True
 
         Example:
             >>> opts = BrowserOptionsSetter()
@@ -155,7 +155,7 @@ class BrowserOptionsSetter:
         """设置代理服务器
 
         Args:
-            server (str): 代理服务器地址，如 "http://127.0.0.1:8080"
+            server (str): 代理服务器地址, 如 "http://127.0.0.1:8080"
             username (Optional[str]): 代理认证用户名
             password (Optional[str]): 代理认证密码
 
@@ -183,10 +183,10 @@ class BrowserOptionsSetter:
         self._context_options["downloads_path"] = str(download_path)
 
     def set_timeout(self, timeout: int = 30000):
-        """设置默认超时时间（毫秒）
+        """设置默认超时时间(毫秒)
 
         Args:
-            timeout (int): 超时时间（毫秒），默认为 30000
+            timeout (int): 超时时间(毫秒), 默认为 30000
 
         Example:
             >>> opts = BrowserOptionsSetter()
@@ -207,10 +207,10 @@ class BrowserOptionsSetter:
         self._launch_options.setdefault("args", []).extend(args)
 
     def set_device_scale_factor(self, scale: float = 2.0):
-        """设置设备缩放因子（影响截图清晰度）
+        """设置设备缩放因子(影响截图清晰度)
 
         Args:
-            scale (float): 缩放因子，默认为 2.0
+            scale (float): 缩放因子, 默认为 2.0
 
         Example:
             >>> opts = BrowserOptionsSetter()
@@ -223,7 +223,7 @@ class BrowserOptionsSetter:
 
         Args:
             video_dir (Union[str, Path]): 视频保存目录
-            video_size (Optional[Dict[str, int]]): 视频尺寸，如 {"width": 1920, "height": 1080}
+            video_size (Optional[Dict[str, int]]): 视频尺寸, 如 {"width": 1920, "height": 1080}
 
         Example:
             >>> opts = BrowserOptionsSetter()
@@ -238,15 +238,15 @@ class BrowserOptionsSetter:
     def create_chromium_opts(cls, headless: bool = False, window_size: Optional[Tuple[int, int]] = None,
                              user_agent: Optional[str] = None, locale: str = "zh-CN",
                              ignore_https: bool = True, timeout: int = 30000) -> "BrowserOptionsSetter":
-        """快速创建 Chromium 浏览器参数（类方法快捷入口）
+        """快速创建 Chromium 浏览器参数(类方法快捷入口)
 
         Args:
-            headless (bool): 无头模式，默认为 False
+            headless (bool): 无头模式, 默认为 False
             window_size (Optional[Tuple[int, int]]): 窗口尺寸
             user_agent (Optional[str]): 用户代理
-            locale (str): 语言区域，默认为 zh-CN
-            ignore_https (bool): 忽略 HTTPS 错误，默认为 True
-            timeout (int): 超时时间（毫秒），默认为 30000
+            locale (str): 语言区域, 默认为 zh-CN
+            ignore_https (bool): 忽略 HTTPS 错误, 默认为 True
+            timeout (int): 超时时间(毫秒), 默认为 30000
 
         Returns:
             BrowserOptionsSetter: 配置好的参数设置器
@@ -271,7 +271,7 @@ class BrowserOptionsSetter:
 class PlaywrightUtils:
     """Playwright 浏览器自动化工具类
 
-    封装 Playwright 的常用浏览器操作，包含页面导航、元素查找、点击、文本输入、
+    封装 Playwright 的常用浏览器操作, 包含页面导航、元素查找、点击、文本输入、
     截图、Cookie 管理等。支持上下文管理器自动清理资源。
 
     Usage:
@@ -293,10 +293,10 @@ class PlaywrightUtils:
         """初始化 PlaywrightUtils
 
         Args:
-            browser_type (str): 浏览器类型，可选 chromium/firefox/webkit，默认为 chromium
+            browser_type (str): 浏览器类型, 可选 chromium/firefox/webkit, 默认为 chromium
             options (Optional[BrowserOptionsSetter]): 浏览器参数设置器
-            connect_url (Optional[str]): 远程浏览器连接 URL（如 ws://...），为 None 则启动本地浏览器
-            headless (bool): 是否使用无头模式，仅在不提供 options 时生效，默认为 False
+            connect_url (Optional[str]): 远程浏览器连接 URL(如 ws://...), 为 None 则启动本地浏览器
+            headless (bool): 是否使用无头模式, 仅在不提供 options 时生效, 默认为 False
 
         Example:
             >>> pw = PlaywrightUtils("chromium")
@@ -332,7 +332,7 @@ class PlaywrightUtils:
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        """退出上下文管理器，自动释放资源"""
+        """退出上下文管理器, 自动释放资源"""
         self.close()
 
     def close(self):
@@ -370,8 +370,8 @@ class PlaywrightUtils:
 
         Args:
             url (str): 页面 URL
-            wait_until (Optional[str]): 等待策略，可选 load/domcontentloaded/networkidle/commit，默认为 domcontentloaded
-            timeout (int): 超时时间（毫秒），默认为 30000
+            wait_until (Optional[str]): 等待策略, 可选 load/domcontentloaded/networkidle/commit, 默认为 domcontentloaded
+            timeout (int): 超时时间(毫秒), 默认为 30000
 
         Example:
             >>> pw = PlaywrightUtils(headless=True)
@@ -403,7 +403,7 @@ class PlaywrightUtils:
 
         Args:
             selector (str): CSS 选择器或 Playwright 选择器字符串
-            timeout (int): 等待超时时间（毫秒），默认为 30000
+            timeout (int): 等待超时时间(毫秒), 默认为 30000
 
         Returns:
             ElementHandle: 对应的元素句柄
@@ -423,7 +423,7 @@ class PlaywrightUtils:
 
         Args:
             selector (str): CSS 选择器或 Playwright 选择器字符串
-            timeout (int): 等待超时时间（毫秒），默认为 30000
+            timeout (int): 等待超时时间(毫秒), 默认为 30000
 
         Returns:
             List[ElementHandle]: 元素句柄列表
@@ -444,8 +444,8 @@ class PlaywrightUtils:
 
         Args:
             text (str): 要匹配的文本
-            tag (str): HTML 标签名，默认为 *
-            timeout (int): 等待超时时间（毫秒），默认为 30000
+            tag (str): HTML 标签名, 默认为 *
+            timeout (int): 等待超时时间(毫秒), 默认为 30000
 
         Returns:
             ElementHandle: 找到的元素
@@ -488,9 +488,9 @@ class PlaywrightUtils:
         """点击元素
 
         Args:
-            selector (Optional[str]): 元素选择器，与 element 二选一
-            element (Optional[ElementHandle]): 元素句柄，与 selector 二选一
-            timeout (int): 等待超时时间（毫秒），默认为 30000
+            selector (Optional[str]): 元素选择器, 与 element 二选一
+            element (Optional[ElementHandle]): 元素句柄, 与 selector 二选一
+            timeout (int): 等待超时时间(毫秒), 默认为 30000
 
         Example:
             >>> pw = PlaywrightUtils(headless=True)
@@ -510,7 +510,7 @@ class PlaywrightUtils:
         Args:
             selector (Optional[str]): 元素选择器
             element (Optional[ElementHandle]): 元素句柄
-            timeout (int): 等待超时时间（毫秒），默认为 30000
+            timeout (int): 等待超时时间(毫秒), 默认为 30000
         """
         if element:
             element.dblclick(timeout=timeout)
@@ -524,7 +524,7 @@ class PlaywrightUtils:
         Args:
             selector (Optional[str]): 元素选择器
             element (Optional[ElementHandle]): 元素句柄
-            timeout (int): 等待超时时间（毫秒），默认为 30000
+            timeout (int): 等待超时时间(毫秒), 默认为 30000
         """
         if element:
             element.click(button="right", timeout=timeout)
@@ -539,8 +539,8 @@ class PlaywrightUtils:
             selector (Optional[str]): 元素选择器
             element (Optional[ElementHandle]): 元素句柄
             text (str): 要输入的文本
-            delay (int): 按键间隔（毫秒），模拟真人输入，默认为 0
-            timeout (int): 等待超时时间（毫秒），默认为 30000
+            delay (int): 按键间隔(毫秒), 模拟真人输入, 默认为 0
+            timeout (int): 等待超时时间(毫秒), 默认为 30000
 
         Example:
             >>> pw = PlaywrightUtils(headless=True)
@@ -555,14 +555,14 @@ class PlaywrightUtils:
 
     def type_keys(self, selector: Optional[str] = None, element: Optional[ElementHandle] = None,
                   text: str = "", delay: int = 50, timeout: int = 30000):
-        """模拟键盘逐键输入（比 fill 更真实，但更慢）
+        """模拟键盘逐键输入(比 fill 更真实, 但更慢)
 
         Args:
             selector (Optional[str]): 元素选择器
             element (Optional[ElementHandle]): 元素句柄
             text (str): 要输入的文本
-            delay (int): 按键间隔（毫秒），默认为 50
-            timeout (int): 等待超时时间（毫秒），默认为 30000
+            delay (int): 按键间隔(毫秒), 默认为 50
+            timeout (int): 等待超时时间(毫秒), 默认为 30000
         """
         if element:
             element.type(text, delay=delay, timeout=timeout)
@@ -589,9 +589,9 @@ class PlaywrightUtils:
         Args:
             selector (Optional[str]): 元素选择器
             element (Optional[ElementHandle]): 元素句柄
-            select_type (str): 选择策略，可选 label/value/index，默认为 label
+            select_type (str): 选择策略, 可选 label/value/index, 默认为 label
             select_value (Union[str, List[str]]): 选择值
-            timeout (int): 等待超时时间（毫秒），默认为 30000
+            timeout (int): 等待超时时间(毫秒), 默认为 30000
 
         Returns:
             List[str]: 选中选项的值列表
@@ -617,7 +617,7 @@ class PlaywrightUtils:
         Args:
             selector (Optional[str]): 元素选择器
             element (Optional[ElementHandle]): 元素句柄
-            timeout (int): 等待超时时间（毫秒），默认为 30000
+            timeout (int): 等待超时时间(毫秒), 默认为 30000
 
         Returns:
             str: 元素的文本内容
@@ -641,11 +641,11 @@ class PlaywrightUtils:
         Args:
             selector (Optional[str]): 元素选择器
             element (Optional[ElementHandle]): 元素句柄
-            attr (str): 属性名，默认为 href
-            timeout (int): 等待超时时间（毫秒），默认为 30000
+            attr (str): 属性名, 默认为 href
+            timeout (int): 等待超时时间(毫秒), 默认为 30000
 
         Returns:
-            Optional[str]: 属性值，不存在时返回 None
+            Optional[str]: 属性值, 不存在时返回 None
         """
         if element:
             return element.get_attribute(attr)
@@ -658,7 +658,7 @@ class PlaywrightUtils:
         Args:
             selector (Optional[str]): 元素选择器
             element (Optional[ElementHandle]): 元素句柄
-            timeout (int): 等待超时时间（毫秒），默认为 30000
+            timeout (int): 等待超时时间(毫秒), 默认为 30000
 
         Returns:
             str: 元素 value 属性值
@@ -714,7 +714,7 @@ class PlaywrightUtils:
         Args:
             selector (Optional[str]): 元素选择器
             element (Optional[ElementHandle]): 元素句柄
-            timeout (int): 等待超时时间（毫秒），默认为 30000
+            timeout (int): 等待超时时间(毫秒), 默认为 30000
 
         Returns:
             str: 元素的 outerHTML
@@ -732,8 +732,8 @@ class PlaywrightUtils:
 
         Args:
             selector (str): CSS 选择器
-            state (str): 目标状态，可选 visible/hidden/attached/detached，默认为 visible
-            timeout (int): 超时时间（毫秒），默认为 30000
+            state (str): 目标状态, 可选 visible/hidden/attached/detached, 默认为 visible
+            timeout (int): 超时时间(毫秒), 默认为 30000
 
         Returns:
             ElementHandle: 等待到元素
@@ -752,7 +752,7 @@ class PlaywrightUtils:
         """强制等待指定时间
 
         Args:
-            ms (int): 等待毫秒数，默认为 1000
+            ms (int): 等待毫秒数, 默认为 1000
 
         Example:
             >>> pw = PlaywrightUtils(headless=True)
@@ -765,7 +765,7 @@ class PlaywrightUtils:
 
         Args:
             expression (str): JavaScript 函数体或表达式
-            timeout (int): 超时时间（毫秒），默认为 30000
+            timeout (int): 超时时间(毫秒), 默认为 30000
 
         Example:
             >>> pw = PlaywrightUtils(headless=True)
@@ -783,7 +783,7 @@ class PlaywrightUtils:
         """切换到指定索引的标签页
 
         Args:
-            index (int): 标签页索引，从 0 开始
+            index (int): 标签页索引, 从 0 开始
 
         Example:
             >>> pw = PlaywrightUtils(headless=True)
@@ -826,7 +826,7 @@ class PlaywrightUtils:
         """关闭标签页
 
         Args:
-            page (Optional[PWPage]): 要关闭的标签页，为 None 时关闭当前页
+            page (Optional[PWPage]): 要关闭的标签页, 为 None 时关闭当前页
         """
         target = page or self.page
         target.close()
@@ -845,7 +845,7 @@ class PlaywrightUtils:
 
         Args:
             selector (str): iframe 元素的选择器
-            timeout (int): 等待超时时间（毫秒），默认为 30000
+            timeout (int): 等待超时时间(毫秒), 默认为 30000
 
         Example:
             >>> pw = PlaywrightUtils(headless=True)
@@ -873,9 +873,9 @@ class PlaywrightUtils:
         """对当前页面进行截图
 
         Args:
-            output_path (Union[str, Path]): 截图保存路径（支持 png/jpg）
-            full_page (bool): 是否截取整个页面（包括滚动区域），默认为 False
-            quality (Optional[int]): 图片质量（仅 jpg），1-100
+            output_path (Union[str, Path]): 截图保存路径(支持 png/jpg)
+            full_page (bool): 是否截取整个页面(包括滚动区域), 默认为 False
+            quality (Optional[int]): 图片质量(仅 jpg), 1-100
 
         Returns:
             bytes: 截图二进制数据
@@ -900,7 +900,7 @@ class PlaywrightUtils:
         Args:
             selector (str): 元素选择器
             output_path (Union[str, Path]): 截图保存路径
-            timeout (int): 等待超时时间（毫秒），默认为 30000
+            timeout (int): 等待超时时间(毫秒), 默认为 30000
 
         Returns:
             bytes: 截图二进制数据
@@ -941,7 +941,7 @@ class PlaywrightUtils:
         Args:
             selector (str): 元素选择器
             script (str): JavaScript 代码
-            timeout (int): 等待超时时间（毫秒），默认为 30000
+            timeout (int): 等待超时时间(毫秒), 默认为 30000
 
         Returns:
             Any: 执行结果
@@ -973,7 +973,7 @@ class PlaywrightUtils:
         """添加 Cookie
 
         Args:
-            cookie (Dict[str, Any]): Cookie 字典，必须包含 name 和 value 字段
+            cookie (Dict[str, Any]): Cookie 字典, 必须包含 name 和 value 字段
 
         Example:
             >>> pw = PlaywrightUtils(headless=True)
@@ -996,7 +996,7 @@ class PlaywrightUtils:
         Args:
             selector (str): 文件输入元素的选择器
             file_paths (Union[str, List[str]]): 文件路径或路径列表
-            timeout (int): 等待超时时间（毫秒），默认为 30000
+            timeout (int): 等待超时时间(毫秒), 默认为 30000
 
         Example:
             >>> pw = PlaywrightUtils(headless=True)
@@ -1016,7 +1016,7 @@ class PlaywrightUtils:
         Args:
             selector (str): 触发下载的元素选择器
             download_dir (Union[str, Path]): 下载保存目录
-            timeout (int): 等待下载完成超时时间（毫秒），默认为 60000
+            timeout (int): 等待下载完成超时时间(毫秒), 默认为 60000
 
         Returns:
             Path: 下载文件路径
@@ -1037,10 +1037,10 @@ class PlaywrightUtils:
     # region ---------------------------- 对话框与弹窗 ----------------------------
 
     def handle_dialog(self, action: str = "accept", text: Optional[str] = None):
-        """设置对话框处理方式（需在触发对话框前调用）
+        """设置对话框处理方式(需在触发对话框前调用)
 
         Args:
-            action (str): 处理方式，可选 accept/dismiss，默认为 accept
+            action (str): 处理方式, 可选 accept/dismiss, 默认为 accept
             text (Optional[str]): 输入到 prompt 对话框的文本
 
         Example:
@@ -1074,7 +1074,7 @@ class PlaywrightUtils:
 
         Args:
             selector (str): 元素选择器
-            timeout (int): 等待超时时间（毫秒），默认为 30000
+            timeout (int): 等待超时时间(毫秒), 默认为 30000
         """
         element = self.wait_for_element(selector, timeout=timeout)
         element.scroll_into_view_if_needed(timeout=timeout)
@@ -1086,7 +1086,7 @@ class PlaywrightUtils:
         Args:
             selector (Optional[str]): 元素选择器
             element (Optional[ElementHandle]): 元素句柄
-            timeout (int): 等待超时时间（毫秒），默认为 30000
+            timeout (int): 等待超时时间(毫秒), 默认为 30000
         """
         if element:
             element.hover(timeout=timeout)
@@ -1099,7 +1099,7 @@ class PlaywrightUtils:
         Args:
             source_selector (str): 被拖拽元素选择器
             target_selector (str): 目标元素选择器
-            timeout (int): 等待超时时间（毫秒），默认为 30000
+            timeout (int): 等待超时时间(毫秒), 默认为 30000
 
         Example:
             >>> pw = PlaywrightUtils(headless=True)
@@ -1113,7 +1113,7 @@ class PlaywrightUtils:
         """按下键盘按键
 
         Args:
-            key (str): 按键名，如 Enter/Tab/Escape/ArrowDown/Control+a
+            key (str): 按键名, 如 Enter/Tab/Escape/ArrowDown/Control+a
 
         Example:
             >>> pw = PlaywrightUtils(headless=True)
@@ -1132,7 +1132,7 @@ class PlaywrightUtils:
 
         Args:
             url_or_pattern (str): URL 字符串或正则表达式
-            timeout (int): 超时时间（毫秒），默认为 30000
+            timeout (int): 超时时间(毫秒), 默认为 30000
         """
         self.page.wait_for_request(url_or_pattern, timeout=timeout)
 
@@ -1141,7 +1141,7 @@ class PlaywrightUtils:
 
         Args:
             url_or_pattern (str): URL 字符串或正则表达式
-            timeout (int): 超时时间（毫秒），默认为 30000
+            timeout (int): 超时时间(毫秒), 默认为 30000
         """
         self.page.wait_for_response(url_or_pattern, timeout=timeout)
 
