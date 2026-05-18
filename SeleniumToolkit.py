@@ -1,3 +1,20 @@
+"""基于 Selenium 的浏览器自动化工具类, 封装 Chrome/Firefox 常用浏览器操作
+
+提供浏览器启动配置、页面导航、元素操作、等待策略、截图、验证码识别等功能。
+兼容性广泛, 适合各类 Web 自动化测试场景。
+
+依赖安装:
+    pip install selenium          # Selenium WebDriver
+    pip install webdriver-manager # 自动驱动管理(推荐)
+    pip install ddddocr           # 验证码识别(可选)
+    pip install requests          # HTTP 辅助请求(可选)
+
+Usage:
+    >>> from SeleniumToolkit import SeleniumToolkit, ChromeOptsSetter
+    >>> opts = ChromeOptsSetter()
+    >>> driver = SeleniumToolkit(options=opts)
+    >>> driver.start_web("https://example.com")
+"""
 import requests, os
 from selenium import webdriver
 from ddddocr import DdddOcr

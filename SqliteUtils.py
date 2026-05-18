@@ -1,7 +1,15 @@
 # -*- coding: utf-8 -*-
-"""SQLite数据库工具类 SqliteUtils.py"""
+"""SQLite 数据库工具类 SqliteUtils
 
-# ------------ common ------------
+封装 SQLite 数据库的常用操作, 包括连接管理、SQL 执行、数据查询、事务管理等。
+基于 Python 内置 sqlite3 模块实现, 无需安装第三方依赖, 即插即用。
+
+功能:
+    - 数据库连接管理(支持上下文管理器)
+    - 参数化查询防 SQL 注入
+    - 单条/批量 CRUD 操作
+    - 事务管理(commit/rollback)
+"""
 import os
 from typing import (
     Any,

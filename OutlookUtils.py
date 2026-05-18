@@ -1,3 +1,16 @@
+"""Outlook 邮件客户端工具类, 通过 COM 接口操作 Microsoft Outlook
+
+封装 Outlook 邮件的发送、接收、搜索、管理等操作。
+仅支持 Windows 系统, 需要安装 Outlook 客户端。
+
+依赖安装:
+    pip install pywin32      # Windows COM 接口支持
+
+Usage:
+    >>> from OutlookUtils import OutlookUtils
+    >>> outlook = OutlookUtils()
+    >>> mails = outlook.get_mails(folder="Inbox")
+"""
 import win32com.client as win32
 from datetime import datetime
 

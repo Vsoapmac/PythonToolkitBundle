@@ -1,5 +1,18 @@
 # -*- coding: utf-8 -*-
-# MySQL 数据库操作工具类, 提供连接管理、CRUD、事务、批量操作等功能
+"""MySQL 数据库操作工具类, 提供连接管理、CRUD、事务、批量操作等功能
+
+封装 MySQL 数据库的常用操作, 支持连接池管理、参数化查询防注入。
+适用于 MySQL 5.7+ / MySQL 8.0+ 版本。
+
+依赖安装:
+    pip install pymysql     # MySQL 驱动
+    pip install dbutils     # 数据库连接池(可选)
+
+Usage:
+    >>> from MySQLUtils import MySQLUtils
+    >>> with MySQLUtils(host="localhost", port=3306, user="root", password="xxx", database="test") as db:
+    ...     result = db.query("SELECT * FROM users")
+"""
 # ------------ common ------------
 from typing import (
     Any,

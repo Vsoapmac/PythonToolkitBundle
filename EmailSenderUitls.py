@@ -1,4 +1,14 @@
-"""邮件工具类 EmailSenderUitls"""
+"""邮件发送工具类 EmailSenderUitls
+
+封装 SMTP 邮件发送功能, 支持纯文本、HTML、附件、内嵌图片等邮件类型。
+基于 Python 标准库 smtplib/email 实现, 无需安装第三方依赖。
+
+功能:
+    - 纯文本/HTML 邮件发送
+    - 多附件支持
+    - 内嵌图片(CID引用)
+    - 抄送/密送支持
+"""
 import smtplib, os, traceback
 from email.mime.image import MIMEImage
 from email.mime.multipart import MIMEMultipart

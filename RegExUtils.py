@@ -1,4 +1,14 @@
-"""正则表达式工具类 RegExUtils"""
+"""正则表达式工具类 RegExUtils
+
+提供常用的正则表达式模式和匹配方法, 封装常见文本提取场景。
+基于 Python 标准库 re 实现, 无需安装第三方依赖。
+
+内置模式:
+    - ANY_STR_PATTERN: 匹配任意字符 \\w+
+    - ANY_NUMBER_PATTERN: 匹配数字 \\d+
+    - ANY_WORD_PATTERN: 匹配字母 [a-zA-Z]+
+    - ANY_EMAIL_PATTERN: 匹配邮箱地址
+"""
 import re
 
 

@@ -1,5 +1,18 @@
 # -*- coding: utf-8 -*-
-# 基于 Polars 的数据处理工具类, 提供接近 pandas 的 API 体验, 同时利用 Polars 的高性能
+"""基于 Polars 的数据处理工具类, 提供接近 pandas 的 API 体验, 同时利用 Polars 的高性能
+
+封装 Polars DataFrame 的常用操作, API 设计贴近 pandas 使用习惯以降低迁移成本,
+底层享受 Polars 多线程和内存映射带来的性能优势。
+
+依赖安装:
+    pip install polars
+
+Usage:
+    >>> from PolarsUtils import PolarsUtils
+    >>> df = PolarsUtils({"a": [1, 2, 3], "b": [4, 5, 6]})
+    >>> df.head().to_dict()
+    {'a': [1], 'b': [4]}
+"""
 # ------------ common ------------
 from pathlib import Path
 from typing import (

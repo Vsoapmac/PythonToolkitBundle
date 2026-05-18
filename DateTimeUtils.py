@@ -1,4 +1,14 @@
-"""时间工具类 DateTimeUtils"""
+"""时间工具类 DateTimeUtils
+
+提供日期时间的格式化、解析、计算、时区转换等常用操作。
+基于 Python 标准库 datetime/time 实现, 无需安装第三方依赖。
+
+功能:
+    - 时间戳与字符串互转
+    - 日期加减计算
+    - 时区转换
+    - 常用格式常量
+"""
 import time
 from datetime import datetime, timedelta
 

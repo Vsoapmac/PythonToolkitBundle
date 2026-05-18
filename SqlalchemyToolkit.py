@@ -1,5 +1,20 @@
 # -*- coding: utf-8 -*-
-"""SQLAlchemy工具类 SqlalchemyToolkit.py"""
+"""SQLAlchemy ORM 工具类 SqlalchemyToolkit
+
+提供基于 SQLAlchemy ORM 的数据库操作封装, 支持多种数据库后端(MySQL/PostgreSQL/SQLite/SQL Server)。
+包含连接管理、CRUD 操作、事务管理、批量操作等功能。
+
+依赖安装:
+    pip install sqlalchemy          # ORM 核心
+    pip install pymysql            # MySQL 后端(可选)
+    pip install psycopg2-binary    # PostgreSQL 后端(可选)
+    pip install pymssql            # SQL Server 后端(可选)
+
+Usage:
+    >>> from SqlalchemyToolkit import SqlalchemyToolkit
+    >>> db = SqlalchemyToolkit("mysql+pymysql://user:pass@localhost/db")
+    >>> result = db.query_all(User)
+"""
 
 # ------------ common ------------
 import os
