@@ -1,5 +1,18 @@
 # -*- coding: utf-8 -*-
-# 基于 Playwright 的浏览器自动化工具类, 封装常用浏览器操作, 支持 Chrome/Edge/Firefox
+"""基于 Playwright 的浏览器自动化工具类, 封装常用浏览器操作, 支持 Chrome/Edge/Firefox
+
+提供完整的浏览器自动化能力, 包含页面导航、元素交互、截图录屏、Cookie 管理、
+网络监听等。支持本地浏览器通道, 无需 playwright install 下载浏览器。
+
+依赖安装:
+    pip install playwright
+    playwright install       # 下载默认浏览器(可选, 可用 set_channel 使用本地浏览器)
+
+Usage:
+    >>> from PlaywrightUtils import PlaywrightUtils, BrowserOptionsSetter
+    >>> opts = BrowserOptionsSetter.create_chromium_opts(headless=True)
+    >>> pw = PlaywrightUtils(options=opts)
+"""
 # ------------ common ------------
 from pathlib import Path
 from typing import (
@@ -50,6 +63,7 @@ class BrowserOptionsSetter:
         self._launch_options = {}
         self._context_options = {}
         self.browser_type = browser_type
+        self._channel: Optional[str] = None  # 本地浏览器通道, 如 chrome/msedge/firefox
 
     def get_launch_options(self) -> Dict[str, Any]:
         """获取启动参数字典
@@ -218,6 +232,34 @@ class BrowserOptionsSetter:
         """
         self._context_options["device_scale_factor"] = scale
 
+    def set_channel(self, channel: str):
+        """设置本地浏览器通道(使用系统已安装的浏览器而非 Playwright 下载的)
+
+        当 playwright install 无法下载浏览器时, 可使用此方法指定本地已安装的浏览器。
+
+        Args:
+            channel (str): 浏览器通道名称, 常见值:
+                - "chrome": Google Chrome
+                - "msedge": Microsoft Edge
+                - "firefox": Firefox (仅 firefox 类型有效)
+
+        Example:
+            >>> opts = BrowserOptionsSetter("chromium")
+            >>> opts.set_channel("chrome")  # 使用本地安装的 Chrome 浏览器
+            >>> opts.get_launch_options()["channel"]
+            'chrome'
+        """
+        self._channel = channel
+        self._launch_options["channel"] = channel
+
+    def get_channel(self) -> Optional[str]:
+        """获取当前设置的浏览器通道
+
+        Returns:
+            Optional[str]: 浏览器通道名, 未设置时返回 None
+        """
+        return self._channel
+
     def set_record_video(self, video_dir: Union[str, Path], video_size: Optional[Dict[str, int]] = None):
         """设置录屏功能
 
@@ -237,7 +279,8 @@ class BrowserOptionsSetter:
     @classmethod
     def create_chromium_opts(cls, headless: bool = False, window_size: Optional[Tuple[int, int]] = None,
                              user_agent: Optional[str] = None, locale: str = "zh-CN",
-                             ignore_https: bool = True, timeout: int = 30000) -> "BrowserOptionsSetter":
+                             ignore_https: bool = True, timeout: int = 30000,
+                             channel: Optional[str] = None) -> "BrowserOptionsSetter":
         """快速创建 Chromium 浏览器参数(类方法快捷入口)
 
         Args:
@@ -247,6 +290,7 @@ class BrowserOptionsSetter:
             locale (str): 语言区域, 默认为 zh-CN
             ignore_https (bool): 忽略 HTTPS 错误, 默认为 True
             timeout (int): 超时时间(毫秒), 默认为 30000
+            channel (Optional[str]): 本地浏览器通道, 如 "chrome"/"msedge", 为 None 时使用 Playwright 默认浏览器
 
         Returns:
             BrowserOptionsSetter: 配置好的参数设置器
@@ -255,6 +299,10 @@ class BrowserOptionsSetter:
             >>> opts = BrowserOptionsSetter.create_chromium_opts(headless=True)
             >>> opts.get_launch_options()["headless"]
             True
+            >>> # 使用本地 Chrome 浏览器
+            >>> opts = BrowserOptionsSetter.create_chromium_opts(headless=True, channel="chrome")
+            >>> opts.get_launch_options()["channel"]
+            'chrome'
         """
         opts = cls("chromium")
         opts.set_headless(headless)
@@ -265,6 +313,8 @@ class BrowserOptionsSetter:
         opts.set_locale(locale)
         opts.set_ignore_https_errors(ignore_https)
         opts.set_timeout(timeout)
+        if channel:
+            opts.set_channel(channel)
         return opts
 
 
@@ -294,15 +344,26 @@ class PlaywrightUtils:
 
         Args:
             browser_type (str): 浏览器类型, 可选 chromium/firefox/webkit, 默认为 chromium
-            options (Optional[BrowserOptionsSetter]): 浏览器参数设置器
+            options (Optional[BrowserOptionsSetter]): 浏览器参数设置器,
+                可通过 options.set_channel("chrome") 指定使用本地浏览器
             connect_url (Optional[str]): 远程浏览器连接 URL(如 ws://...), 为 None 则启动本地浏览器
             headless (bool): 是否使用无头模式, 仅在不提供 options 时生效, 默认为 False
 
         Example:
+            >>> # 使用 Playwright 默认下载的浏览器
             >>> pw = PlaywrightUtils("chromium")
             >>> pw.browser is not None
             True
             >>> pw.close()
+            >>> # 使用本地已安装的 Chrome 浏览器
+            >>> opts = BrowserOptionsSetter()
+            >>> opts.set_channel("chrome")
+            >>> pw = PlaywrightUtils(options=opts)
+            >>> pw.close()
+
+        Note:
+            当 playwright install 无法下载浏览器时, 可通过 BrowserOptionsSetter.set_channel()
+            指定使用系统已安装的 Chrome("chrome") 或 Edge("msedge") 浏览器。
         """
         self._browser_type = browser_type
         self._playwright = sync_playwright().start()
