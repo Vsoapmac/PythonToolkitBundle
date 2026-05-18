@@ -1,3 +1,19 @@
+"""Excel 文件读写工具类, 基于 xlwings/xlrd/openpyxl 实现
+
+封装 Excel 文件的常用操作, 包括读取、写入、格式设置、样式调整等。
+支持 .xls 和 .xlsx 格式。
+
+依赖安装:
+    pip install xlwings      # Excel 读写和自动化
+    pip install xlrd         # .xls 格式读取
+    pip install xlutils      # .xls 格式写入
+    pip install openpyxl     # .xlsx 格式读写
+
+Usage:
+    >>> from ExcelUtils import ExcelReader, ExcelWriter
+    >>> reader = ExcelReader("data.xlsx")
+    >>> data = reader.read_all()
+"""
 import warnings
 import xlwings as xw
 from pathlib import Path

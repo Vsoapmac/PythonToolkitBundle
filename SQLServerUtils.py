@@ -1,5 +1,17 @@
 # -*- coding: utf-8 -*-
-# SQL Server 数据库操作工具类, 提供连接管理、CRUD、事务、批量操作等功能
+"""SQL Server 数据库操作工具类, 提供连接管理、CRUD、事务、批量操作等功能
+
+封装 SQL Server 数据库的常用操作, 支持连接池管理、参数化查询防注入。
+适用于 SQL Server 2016+ 版本。
+
+依赖安装:
+    pip install pymssql        # SQL Server 驱动
+
+Usage:
+    >>> from SQLServerUtils import SQLServerUtils
+    >>> with SQLServerUtils(server="localhost", user="sa", password="xxx", database="test") as db:
+    ...     result = db.query("SELECT * FROM users")
+"""
 # ------------ common ------------
 from typing import (
     Any,

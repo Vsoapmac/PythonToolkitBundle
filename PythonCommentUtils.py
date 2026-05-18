@@ -1,4 +1,16 @@
-"""python注释工具类 PythonCommentUtils"""
+"""Python 注释处理工具类 PythonCommentUtils
+
+提供 Python 代码注释的批量移除、清理和代码格式化功能。
+依赖 autopep8 进行代码风格标准化。
+
+依赖安装:
+    pip install autopep8      # PEP 8 代码格式化
+
+功能:
+    - 批量移除单行/多行注释
+    - 代码格式化(autopep8)
+    - 递归处理目录下所有 .py 文件
+"""
 import re, os, shutil, autopep8
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor

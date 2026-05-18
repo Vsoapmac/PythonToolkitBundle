@@ -1,3 +1,17 @@
+"""Android 自动化测试工具类, 基于 uiautomator2 和 airtest 实现
+
+封装 Android 设备的常用操作, 包括设备连接、元素查找、点击、滑动、截图等。
+支持 USB 和无线连接方式。
+
+依赖安装:
+    pip install uiautomator2
+    pip install airtest
+
+Usage:
+    >>> import AndroidToolKit as atk
+    >>> device = atk.connect_device("device_serial")
+    >>> device.click_text("按钮文本")
+"""
 import uiautomator2 as u2
 from airtest.core.api import *
 from airtest.core.android.android import Android

@@ -1,3 +1,19 @@
+"""基于 DrissionPage 的浏览器自动化工具类, 封装 Chrome 浏览器常用操作
+
+支持浏览器启动配置、页面导航、元素操作、数据提取、验证码识别等功能。
+相比 Selenium 具有更好的反检测能力和易用性。
+
+依赖安装:
+    pip install DrissionPage
+    pip install ddddocr   # 验证码识别(可选)
+    pip install requests
+
+Usage:
+    >>> from DrissionPageToolKit import ChromeOptionsSetter, DrissionPageToolKit
+    >>> opts = ChromeOptionsSetter()
+    >>> browser = DrissionPageToolKit(opts)
+    >>> browser.start_web("https://example.com")
+"""
 import requests, os
 from pathlib import Path
 from DrissionPage.common import By # 用于给其他模块导入By

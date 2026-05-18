@@ -1,4 +1,14 @@
-"""文件工具类 FilePathUtils"""
+"""文件路径工具类 FilePathUtils
+
+提供文件和目录路径的常用操作, 包括路径处理、文件搜索、哈希计算等。
+基于 Python 标准库 os/sys/shutil/hashlib 实现, 无需安装第三方依赖。
+
+功能:
+    - 路径规范化与拼接
+    - 文件递归搜索
+    - 文件哈希计算(MD5/SHA)
+    - 目录遍历与统计
+"""
 import os
 import sys
 import json
