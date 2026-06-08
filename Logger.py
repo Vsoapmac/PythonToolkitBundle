@@ -24,7 +24,7 @@ def remove(handler_id: int = None):
 
 def add_config(sink=None,
                level: str | int = 'INFO',
-               format: str = "<green>{time:YYYY-MM-DD HH:mm:ss}</green> | pid: <yellow>{process}</yellow> | tid: <magenta>{thread}</magenta> | <cyan>{file}:{function}[line:{line}]</cyan> | <level>{level}</level> | {message}",
+               format: str = "<green>{time:YYYY-MM-DD HH:mm:ss}</green> | pid: <yellow>{process}</yellow> | tid: <magenta>{thread}</magenta> | <cyan>{name}:{function}[line:{line}]</cyan> | <level>{level}</level> | {message}",
                filter=None,
                backtrace=False,
                diagnose=False,
@@ -97,7 +97,7 @@ class Logger:
         # 输出到控制台的log设置
         sys_kwargs = {
             "level": sys_log_level,
-            "format": "<green>{time:YYYY-MM-DD HH:mm:ss}</green> | pid: <yellow>{process}</yellow> | tid: <magenta>{thread}</magenta> | <cyan>{file}:{function}[line:{line}]</cyan> | <level>{level}</level> | {message}",
+            "format": "<green>{time:YYYY-MM-DD HH:mm:ss}</green> | pid: <yellow>{process}</yellow> | tid: <magenta>{thread}</magenta> | <cyan>{name}:{function}[line:{line}]</cyan> | <level>{level}</level> | {message}",
             "colorize": True,
             "backtrace": True,
             "enqueue": enqueue,
@@ -110,7 +110,7 @@ class Logger:
             file_kwargs = {
                 "sink": log_file_path,
                 "level": log_file_level,
-                "format": "{time:YYYY-MM-DD HH:mm:ss} | pid: {process} | tid: {thread} | {file}:{function}[line:{line}] | {level} | {message}",
+                "format": "{time:YYYY-MM-DD HH:mm:ss} | pid: {process} | tid: {thread} | {name}:{function}[line:{line}] | {level} | {message}",
                 "colorize": False,
                 "enqueue": enqueue,
                 "catch": True,
