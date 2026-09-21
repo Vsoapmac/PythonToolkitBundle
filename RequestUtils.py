@@ -4,11 +4,45 @@
 \npip install lxml
 """
 import json
-import lxml
-import requests
+import lxml # lxml.html、lxml.etree 都挂在 lxml 包下
 import lxml.html
+import requests
 from bs4 import BeautifulSoup, Tag
 
+
+SUPPORTED_METHODS = ("get", "post", "put", "delete", "head") # Supported request methods
+
+
+def _send_request(url: str, request_method: str, data: dict=None, params: dict=None, json: dict=None,
+                  headers: dict=None, cookies: dict=None, timeout: int=60, **request_args) -> requests.Response:
+    """发送请求, 三个请求函数的公共出口, 所有参数对每个请求方法一视同仁
+
+    Args:
+        url (str): 请求的url地址
+        request_method (str): 请求方法, 大小写不敏感, 空白会被忽略
+        data (dict, optional): 请求体, 使用get请求时通常可以忽略. Defaults to None.
+        params (dict, optional): url参数, 这将在url中体现. Defaults to None.
+        json (dict, optional): 要发送的json参数, 等同于request body. Defaults to None.
+        headers (dict, optional): 请求头. Defaults to None.
+        cookies (dict, optional): 要发送的Cookie. Defaults to None.
+        timeout (int, optional): 请求的超时时间. Defaults to 60.
+
+    Returns:
+        requests.Response: 响应对象
+
+    Raises:
+        ValueError: 请求方法不在支持范围内
+
+    Example:
+        >>> _send_request("https://example.com", "POST", params={"page": 1}).status_code
+        200
+    """
+    method = request_method.strip().lower() # 统一成小写, 避免传入 "GET"、"Get" 时匹配不上
+    if method not in SUPPORTED_METHODS:
+        raise ValueError(f"不支持的请求方法: {request_method!r}, 仅支持 {list(SUPPORTED_METHODS)}")
+    # 参数一次性全量透传, 值为None的参数requests会自行忽略, 不必按方法分别挑选
+    return requests.request(method, url, data=data, params=params, json=json,
+                            headers=headers, cookies=cookies, timeout=timeout, **request_args)
 
 def request(url: str, request_method: str="get", data: dict=None, params: dict=None, json: dict=None,
             headers: dict=None, cookies: dict=None, timeout: int=60, **request_args) -> requests.Response:
@@ -16,58 +50,58 @@ def request(url: str, request_method: str="get", data: dict=None, params: dict=N
 
     Args:
         url (str): 请求的url地址
-        request_method (str, optional): 请求方法, 分别有 get|post|put|delete|head. Defaults to "get".
+        request_method (str, optional): 请求方法, 分别有 get|post|put|delete|head, 大小写不敏感. Defaults to "get".
         data (dict, optional): 请求体, 使用get请求时通常可以忽略. Defaults to None.
         params (dict, optional): url参数, 这将在url中体现. Defaults to None.
-        json (dict, optional): 要发送的json参数. Defaults to None.
+        json (dict, optional): 要发送的json参数, 等同于request body. Defaults to None.
         headers (dict, optional): 请求头. Defaults to None.
         cookies (dict, optional): 要发送的Cookie. Defaults to None.
         timeout (int, optional): 请求的超时时间. Defaults to 60.
 
     Returns:
         requests.Response: 响应对象
+
+    Raises:
+        ValueError: 请求方法不在支持范围内
+
+    Example:
+        >>> request("https://example.com").status_code
+        200
     """
-    if request_method == "get":
-        return requests.get(url, params=params, json=json, headers=headers, cookies=cookies, timeout=timeout, **request_args)
-    elif request_method == "post":
-        return requests.post(url, data=data, json=json, headers=headers, cookies=cookies, timeout=timeout, **request_args)
-    elif request_method == "put":
-        return requests.put(url, data=data, json=json, headers=headers, cookies=cookies, timeout=timeout, **request_args)
-    elif request_method == "delete":
-        return requests.delete(url, data=data, json=json, headers=headers, cookies=cookies, timeout=timeout, **request_args)
-    elif request_method == "head":
-        return requests.head(url, headers=headers, json=json, cookies=cookies, timeout=timeout, **request_args)
+    return _send_request(url, request_method, data=data, params=params, json=json,
+                         headers=headers, cookies=cookies, timeout=timeout, **request_args)
 
 def get_response_detail(url_or_response: str|requests.Response, request_method: str="get", data: dict=None, params: dict=None, 
                         json: dict=None, headers: dict=None, cookies: dict=None, timeout: int=60, **request_args) -> dict:
     """获取响应的详细信息
 
     Args:
-        url (str|requests.Response): 请求的url地址或Response对象
-        request_method (str, optional): 请求方法, 分别有 get|post|put|delete|head. Defaults to "get".
+        url_or_response (str|requests.Response): 请求的url地址或Response对象
+        request_method (str, optional): 请求方法, 分别有 get|post|put|delete|head, 大小写不敏感. Defaults to "get".
         data (dict, optional): 请求体, 使用get请求时通常可以忽略. Defaults to None.
         params (dict, optional): url参数, 这将在url中体现. Defaults to None.
-        json (dict, optional): 要发送的json参数. Defaults to None.
+        json (dict, optional): 要发送的json参数, 等同于request body. Defaults to None.
         headers (dict, optional): 请求头. Defaults to None.
         cookies (dict, optional): 要发送的Cookie. Defaults to None.
         timeout (int, optional): 请求的超时时间. Defaults to 60.
 
     Returns:
         dict: 响应的详细信息, 包括url、状态码(status_code)、头部(headers)、cookies、编码(encoding)、内容(content)、文本(text)。
+
+    Raises:
+        ValueError: 请求方法不在支持范围内
+
+    Example:
+        >>> get_response_detail("https://example.com")["status_code"]
+        200
     """
     if isinstance(url_or_response, str):
-        if request_method == "get":
-            return requests.get(url_or_response, params=params, json=json, headers=headers, cookies=cookies, timeout=timeout, **request_args)
-        elif request_method == "post":
-            return requests.post(url_or_response, data=data, json=json, headers=headers, cookies=cookies, timeout=timeout, **request_args)
-        elif request_method == "put":
-            return requests.put(url_or_response, data=data, json=json, headers=headers, cookies=cookies, timeout=timeout, **request_args)
-        elif request_method == "delete":
-            return requests.delete(url_or_response, data=data, json=json, headers=headers, cookies=cookies, timeout=timeout, **request_args)
-        elif request_method == "head":
-            return requests.head(url_or_response, headers=headers, json=json, cookies=cookies, timeout=timeout, **request_args)
+        response = _send_request(url_or_response, request_method, data=data, params=params, json=json,
+                                 headers=headers, cookies=cookies, timeout=timeout, **request_args)
     elif isinstance(url_or_response, requests.Response):
         response = url_or_response
+    else:
+        raise TypeError(f"url_or_response 只能是url地址或Response对象, 实际为 {type(url_or_response).__name__}")
     return {
         "url": response.url,
         "status_code": response.status_code,
@@ -84,33 +118,35 @@ def get_html(url_or_response: str|requests.Response, request_method: str="get", 
     """获取html文本
 
     Args:
-        url_or_response (str): 请求的url地址或requests.Response对象
-        request_method (str, optional): 请求方法, 分别有 get|post|put|delete|head. Defaults to "get".
-        response_encoding (str, optional): 响应编码. Defaults to "UTF-8".
+        url_or_response (str|requests.Response): 请求的url地址或requests.Response对象
+        request_method (str, optional): 请求方法, 分别有 get|post|put|delete|head, 大小写不敏感. Defaults to "get".
+        response_encoding (str, optional): 响应编码, 传入None时按响应头自动判断. Defaults to "UTF-8".
         data (dict, optional): 请求体, 使用get请求时通常可以忽略. Defaults to None.
         params (dict, optional): url参数, 这将在url中体现. Defaults to None.
-        json (dict, optional): 要发送的json参数. Defaults to None.
+        json (dict, optional): 要发送的json参数, 等同于request body. Defaults to None.
         headers (dict, optional): 请求头. Defaults to None.
         cookies (dict, optional): 要发送的Cookie. Defaults to None.
         timeout (int, optional): 请求的超时时间. Defaults to 60.
 
     Returns:
         str: html文本内容
+
+    Raises:
+        ValueError: 请求方法不在支持范围内
+
+    Example:
+        >>> get_html("https://example.com")[:15]
+        '<!doctype html>'
     """
     if isinstance(url_or_response, str):
-        if request_method == "get":
-            return requests.get(url_or_response, params=params, json=json, headers=headers, cookies=cookies, timeout=timeout, **request_args)
-        elif request_method == "post":
-            return requests.post(url_or_response, data=data, json=json, headers=headers, cookies=cookies, timeout=timeout, **request_args)
-        elif request_method == "put":
-            return requests.put(url_or_response, data=data, json=json, headers=headers, cookies=cookies, timeout=timeout, **request_args)
-        elif request_method == "delete":
-            return requests.delete(url_or_response, data=data, json=json, headers=headers, cookies=cookies, timeout=timeout, **request_args)
-        elif request_method == "head":
-            return requests.head(url_or_response, headers=headers, json=json, cookies=cookies, timeout=timeout, **request_args)
-    else:
+        response = _send_request(url_or_response, request_method, data=data, params=params, json=json,
+                                 headers=headers, cookies=cookies, timeout=timeout, **request_args)
+    elif isinstance(url_or_response, requests.Response):
         response = url_or_response
-    response.encoding = response_encoding
+    else:
+        raise TypeError(f"url_or_response 只能是url地址或Response对象, 实际为 {type(url_or_response).__name__}")
+    if response_encoding is not None: # 传None时保留响应头里声明的编码
+        response.encoding = response_encoding
     return response.text
 
 def parse_html(html_text: str, parse_method: str="lxml", use_original_lxml: bool=False) -> BeautifulSoup|lxml.html.HtmlElement:
