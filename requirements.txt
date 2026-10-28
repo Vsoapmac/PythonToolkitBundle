@@ -1,23 +1,60 @@
-airtest
+# PythonToolkitBundle 第三方依赖清单
+# 安装: pip install -r requirements.txt
+
+# 基础工具 / 通用
 autopep8
-beautifulsoup4
-ddddocr
 Faker
-lxml
-openpyxl
-pywin32
-pywinauto
-pynput
-pyautogui
+loguru
 PyYAML
 Requests
-selenium
-SQLAlchemy
-uiautomator2
+beautifulsoup4
+lxml
+
+# 数据处理 / Excel
+polars
+openpyxl
 xlrd
 xlutils
 xlwings
 xlwt
+
+# 数据库
+SQLAlchemy
+DBUtils
+pymysql
+psycopg2-binary
+pymssql
+pyodbc                                  # SQL Server 可选后端
+cx-Oracle                               # Oracle 可选后端
+
+# 桌面 / GUI 自动化
+pywin32
+pywinauto
+pynput
+pyautogui
+
+# 浏览器 / Web 自动化
+selenium
 DrissionPage
+playwright                              # 首次使用需执行: playwright install
+ddddocr
+
+# 移动端 / 游戏自动化
+uiautomator2
+airtest
+
+# LangChain
+langchain
+langchain-core
+langchain-openai
+langchain-anthropic
+langchain-google-genai
+langchain-ollama
+langchain-text-splitters
+langchain-mcp-adapters
+pypdf
+
+# 深度学习
+torch
 tensorboard
-progressbar
+progressbar2

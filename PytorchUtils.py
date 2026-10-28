@@ -3,7 +3,7 @@ pytorch工具类, 用于简化pytorch模型的训练过程等
 \n使用该模块, 请执行以下命令安装所需库
 \n注意, 以下示例为cuda12.4的版本, 如果设备不为cuda12,4, 请进入https://pytorch.org/get-started/locally/ 并按照实际情况选择版本:
 \npip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu124
-\npip install progressbar
+\npip install progressbar2
 \npip install tensorboard
 """
 import torch, os, time
