@@ -39,7 +39,9 @@ DeepSeek 没有向量接口, 使用 docs 时指定向量提供商:
     >>> assistant.save_history("session.json")
     >>> assistant.load_history("session.json")
     >>> Assistant("qwen", max_history_messages=40, summarize_history=True)
-    >>> assistant.chat_structured("提取发票信息: ...", Invoice)
+    >>> assistant.chat("提取发票信息: ...", schema=Invoice)  # 按结构返回
+    >>> assistant.chat("这句不调工具", use_tools=False)
+    >>> assistant.chat("这句不写历史", save_history=False)
     >>> import asyncio
     >>> asyncio.run(assistant.achat("你好"))  # 异步
     >>> async def demo():
@@ -52,9 +54,19 @@ DeepSeek 没有向量接口, 使用 docs 时指定向量提供商:
     ... )
 
 高级用法:
-    >>> from LangChainToolKit import create_llm, create_embeddings, create_knowledge_base
+    >>> from LangChainToolKit import (
+    ...     Assistant, create_llm, create_embeddings_llm, create_knowledge_base,
+    ...     create_fake_llm,
+    ... )
     >>> llm = create_llm("deepseek")
-    >>> embeddings = create_embeddings("qwen")
+    >>> assistant = Assistant(llm=create_fake_llm(["你好"]))  # 直接传现成模型
+    >>> relay_llm = create_llm(
+    ...     "openai_compatible",
+    ...     base_url="https://relay.example.com/v1",
+    ...     api_key="sk-...",
+    ...     model="gpt-4o-mini",
+    ... )
+    >>> embeddings = create_embeddings_llm("qwen")
     >>> kb = create_knowledge_base("qwen", path="./docs")
 
 安装:
@@ -118,7 +130,7 @@ __all__ = [
     "Skill",
     "SkillLibrary",
     "create_llm",
-    "create_embeddings",
+    "create_embeddings_llm",
     "create_knowledge_base",
     "create_fake_llm",
     "create_mcp_tools",
@@ -162,6 +174,17 @@ PROVIDERS: Dict[str, Dict[str, Any]] = {
         "class_name": "ChatOpenAI",
         "package": "langchain-openai",
         "api_key_param": "api_key",
+    },
+    "openai_compatible": {
+        "model": None, # 中转站和本地网关的模型名不固定, 必须显式传入
+        "base_url": None, # 由调用方提供 OpenAI 格式的接口地址
+        "env": "OPENAI_API_KEY",
+        "requires_api_key": False, # 本地网关可能不需要密钥
+        "module": "langchain_openai",
+        "class_name": "ChatOpenAI",
+        "package": "langchain-openai",
+        "api_key_param": "api_key",
+        "api_key_fallback": "not-needed", # 满足 OpenAI 客户端的密钥必填检查
     },
     "deepseek": {
         "model": "deepseek-chat",
@@ -339,6 +362,10 @@ PROVIDER_ALIASES: Dict[str, str] = {
     "silicon": "siliconflow",
     "silicon_flow": "siliconflow",
     "local": "ollama",
+    "openai-compatible": "openai_compatible",
+    "compatible": "openai_compatible",
+    "relay": "openai_compatible",
+    "custom": "openai_compatible",
 }
 
 # 假模型的默认回复, responses 为 None 时按顺序循环使用, 可以直接修改这里的内容
@@ -385,11 +412,13 @@ class Assistant:
         '你好'
         >>> len(assistant.history)
         2
+        >>> Assistant(llm=create_fake_llm(["你好"])).chat("hi")
+        '你好'
     """
 
     def __init__(
         self,
-        provider: str,
+        provider: Optional[str] = None,
         api_key: Optional[str] = None,
         model: Optional[str] = None,
         base_url: Optional[str] = None,
@@ -406,13 +435,15 @@ class Assistant:
         summarize_history: bool = False,
         mcp_servers: Optional[Dict[str, Dict[str, Any]]] = None,
         docs_persist_directory: Optional[Union[str, Path]] = None,
+        llm: Optional[BaseChatModel] = None,
         **kwargs: Any,
     ) -> None:
         """创建助手
 
         Args:
-            provider (str): 聊天模型提供商, 支持 openai, deepseek, qwen, moonshot,
-                zhipu, anthropic, google, ollama, openrouter, siliconflow
+            provider (Optional[str]): 聊天模型提供商, 支持 openai, openai_compatible,
+                deepseek, qwen, moonshot, zhipu, anthropic, google, ollama,
+                openrouter, siliconflow. 和 llm 二选一
             api_key (Optional[str]): API 密钥, 不传时读取对应的环境变量, Ollama 不需要
             model (Optional[str]): 模型名称, 不传时使用预置默认值
             base_url (Optional[str]): 接口地址, 不传时使用预置默认值
@@ -428,6 +459,10 @@ class Assistant:
                 向量密钥从对应环境变量读取
             docs_persist_directory (Optional[Union[str, Path]]): 知识库索引保存目录.
                 设置后下次创建会直接加载, 并按文件哈希跳过没变过的文件. 需要和 docs 一起用
+            llm (Optional[BaseChatModel]): 已经创建好的聊天模型, 和 provider 二选一.
+                适合传入 create_fake_llm() 的假模型, 或自己配置的模型实例.
+                传 llm 时不能再传 api_key, model, base_url 或模型参数; 使用 docs 路径时
+                需要显式指定 embed_provider, 或直接传现成的 KnowledgeBase
             allow_execute (bool): 是否允许执行 skills/docs 里的指令和脚本. Defaults to False.
                 关闭时内容只作参考, 脚本不会运行; 打开后允许模型按说明操作, skill 目录里的
                 .py 脚本可以通过 run_skill_script 工具运行. 打开等于信任这些目录里的内容,
@@ -451,13 +486,21 @@ class Assistant:
 
         Raises:
             ValueError: 提供商不支持, 缺少密钥, 数值参数不合法, 工具或 skill 定义有误,
-                模型不支持工具调用, 或 docs_persist_directory 没有和 docs 一起使用
-            TypeError: allow_execute, approve_tool, summarize_history, mcp_servers 或
-                docs_persist_directory 类型不对
+                provider 和 llm 同时传入或都没有传, 或 docs_persist_directory 没有和
+                docs 一起使用
+            TypeError: llm, allow_execute, approve_tool, summarize_history, mcp_servers
+                或 docs_persist_directory 类型不对
             ImportError: 对应的 LangChain 集成包未安装
             FileNotFoundError: skills 或 docs 路径不存在
         """
         # region ---------------------------- 参数校验 ----------------------------
+        if llm is not None:
+            if not isinstance(llm, BaseChatModel):
+                raise TypeError("llm 必须是 BaseChatModel 实例")
+            if provider is not None:
+                raise ValueError("provider 和 llm 只能传一个")
+            if api_key is not None or model is not None or base_url is not None or kwargs:
+                raise ValueError("传入 llm 时不能再传 api_key, model, base_url 或模型参数")
         if max_tool_rounds < 1:
             raise ValueError("max_tool_rounds 必须大于 0")
         if not isinstance(allow_execute, bool):
@@ -484,14 +527,21 @@ class Assistant:
         # endregion ---------------------------- 参数校验 ----------------------------
 
         # region ---------------------------- 创建聊天模型 ----------------------------
-        provider_name = _normalize_provider(provider)
-        llm = create_llm(
-            provider_name,
-            api_key=api_key,
-            model=model,
-            base_url=base_url,
-            **kwargs,
-        )
+        provider_name: Optional[str]
+        if llm is None:
+            if provider is None:
+                raise ValueError("provider 和 llm 至少传一个")
+            provider_name = _normalize_provider(provider)
+            llm = create_llm(
+                provider_name,
+                api_key=api_key,
+                model=model,
+                base_url=base_url,
+                **kwargs,
+            )
+        else:
+            # 直接传入现成模型时, 不再创建模型
+            provider_name = None
         # endregion ---------------------------- 创建聊天模型 ----------------------------
 
         # region ---------------------------- 保存助手配置 ----------------------------
@@ -533,11 +583,9 @@ class Assistant:
             self._skill_tools = self._build_skill_tools(self.skill_library)
         # endregion ---------------------------- 加载 skills ----------------------------
 
-        # region ---------------------------- 合并并绑定工具 ----------------------------
-        self._tools, self._tool_map, self._llm_with_tools = self._prepare_tools(
-            self._skill_tools
-        )
-        # endregion ---------------------------- 合并并绑定工具 ----------------------------
+        # region ---------------------------- 合并工具 ----------------------------
+        self._tools, self._tool_map = self._prepare_tools(self._skill_tools)
+        # endregion ---------------------------- 合并工具 ----------------------------
 
         # region ---------------------------- 挂载知识库 ----------------------------
         if docs is not None:
@@ -554,31 +602,63 @@ class Assistant:
                 )
         # endregion ---------------------------- 挂载知识库 ----------------------------
 
-    def chat(self, prompt: str) -> str:
+    def chat(
+        self,
+        prompt: str,
+        schema: Any = None,
+        *,
+        use_tools: bool = True,
+        save_history: bool = True,
+        **kwargs: Any,
+    ) -> Any:
         """发送一条消息并返回模型回复
 
         有知识库时会先检索资料; 模型请求工具时, 由本程序执行函数并把结果回传.
+        传入 schema 时按给定结构返回, 此时不调用工具, 也不检索知识库.
 
         Args:
             prompt (str): 用户输入
+            schema (Any): Pydantic 模型, dict schema 或其他 with_structured_output
+                支持的类型. 传入时返回结构化结果, 不调用工具
+            use_tools (bool): 是否允许模型调用工具. Defaults to True.
+                schema 不为 None 时忽略
+            save_history (bool): 是否把本轮消息写入历史. Defaults to True.
+                为 False 时本轮不写历史, 也不触发历史裁剪
+            **kwargs (Any): 只在 schema 不为 None 时使用, 原样传给 with_structured_output
 
         Returns:
-            str: 模型回复的纯文本
+            Any: 没有 schema 时返回文本, 有 schema 时返回解析后的结构化结果
 
         Raises:
-            ValueError: prompt 为空
+            ValueError: prompt 为空, 参数类型不对, 额外参数没有配合 schema 使用,
+                或模型不支持结构化输出
             RuntimeError: 工具调用超过 max_tool_rounds, 或模型生成了无法执行的工具调用
         """
         if not isinstance(prompt, str) or not prompt.strip():
             raise ValueError("prompt 不能为空")
+        if not isinstance(use_tools, bool):
+            raise TypeError("use_tools 必须是 bool")
+        if not isinstance(save_history, bool):
+            raise TypeError("save_history 必须是 bool")
 
         self.last_tool_calls = []
-        self._trim_history()
+        if schema is not None:
+            return self._invoke_structured(
+                prompt,
+                schema,
+                save_history=save_history,
+                **kwargs,
+            )
+        if kwargs:
+            raise ValueError("只有传入 schema 时才能使用额外参数")
+
+        if save_history:
+            self._trim_history()
         start = len(self.history) # 本轮消息的起点, 出错时只回滚到这里
         is_success = False # 只有完整结束才保留本轮历史
         try:
             self._prepare(prompt)
-            if self._llm_with_tools is not None:
+            if use_tools and self._tools:
                 result = self._chat_with_tools()
             else:
                 ai_message = self.llm.invoke(self._build_messages())
@@ -591,6 +671,9 @@ class Assistant:
                 # 中途报错或流式输出被提前关闭时, 回滚本轮加入的消息
                 del self.history[start:]
                 self.last_sources = []
+            elif not save_history:
+                # 本轮只是临时对话, 结束后不留下任何消息
+                del self.history[start:]
 
     def chat_with_sources(self, prompt: str) -> Tuple[str, List[Document]]:
         """发送一条消息, 同时返回回复和本次检索到的资料
@@ -660,7 +743,7 @@ class Assistant:
         if not isinstance(prompt, str) or not prompt.strip():
             raise ValueError("prompt 不能为空")
 
-        if self._llm_with_tools is not None:
+        if self._tools:
             yield self.chat(prompt)
             return
 
@@ -684,29 +767,60 @@ class Assistant:
                 del self.history[start:]
                 self.last_sources = []
 
-    async def achat(self, prompt: str) -> str:
+    async def achat(
+        self,
+        prompt: str,
+        schema: Any = None,
+        *,
+        use_tools: bool = True,
+        save_history: bool = True,
+        **kwargs: Any,
+    ) -> Any:
         """chat 的异步版本, 适合 FastAPI 等并发场景
 
         Args:
             prompt (str): 用户输入
+            schema (Any): Pydantic 模型, dict schema 或其他 with_structured_output
+                支持的类型. 传入时返回结构化结果, 不调用工具
+            use_tools (bool): 是否允许模型调用工具. Defaults to True.
+                schema 不为 None 时忽略
+            save_history (bool): 是否把本轮消息写入历史. Defaults to True.
+                为 False 时本轮不写历史, 也不触发历史裁剪
+            **kwargs (Any): 只在 schema 不为 None 时使用, 原样传给 with_structured_output
 
         Returns:
-            str: 模型回复的纯文本
+            Any: 没有 schema 时返回文本, 有 schema 时返回解析后的结构化结果
 
         Raises:
-            ValueError: prompt 为空
+            ValueError: prompt 为空, 参数类型不对, 额外参数没有配合 schema 使用,
+                或模型不支持结构化输出
             RuntimeError: 工具调用超过 max_tool_rounds, 或模型生成了无法执行的工具调用
         """
         if not isinstance(prompt, str) or not prompt.strip():
             raise ValueError("prompt 不能为空")
+        if not isinstance(use_tools, bool):
+            raise TypeError("use_tools 必须是 bool")
+        if not isinstance(save_history, bool):
+            raise TypeError("save_history 必须是 bool")
 
         self.last_tool_calls = []
-        self._trim_history()
+        if schema is not None:
+            return await self._ainvoke_structured(
+                prompt,
+                schema,
+                save_history=save_history,
+                **kwargs,
+            )
+        if kwargs:
+            raise ValueError("只有传入 schema 时才能使用额外参数")
+
+        if save_history:
+            self._trim_history()
         start = len(self.history) # 本轮消息的起点, 出错时只回滚到这里
         is_success = False # 只有完整结束才保留本轮历史
         try:
             self._prepare(prompt)
-            if self._llm_with_tools is not None:
+            if use_tools and self._tools:
                 result = await self._achat_with_tools()
             else:
                 ai_message = await self.llm.ainvoke(self._build_messages())
@@ -719,6 +833,9 @@ class Assistant:
                 # 中途报错或流式输出被提前关闭时, 回滚本轮加入的消息
                 del self.history[start:]
                 self.last_sources = []
+            elif not save_history:
+                # 本轮只是临时对话, 结束后不留下任何消息
+                del self.history[start:]
 
     async def astream(self, prompt: str) -> AsyncIterator[str]:
         """stream 的异步版本, 逐段返回模型回复
@@ -738,7 +855,7 @@ class Assistant:
         if not isinstance(prompt, str) or not prompt.strip():
             raise ValueError("prompt 不能为空")
 
-        if self._llm_with_tools is not None:
+        if self._tools:
             yield await self.achat(prompt)
             return
 
@@ -795,7 +912,7 @@ class Assistant:
             yield {"type": "start"}
 
             # region ---------------------------- 没有工具时直接流式输出 ----------------------------
-            if self._llm_with_tools is None:
+            if not self._tools:
                 for chunk in self.llm.stream(self._build_messages()):
                     text = self._content_to_text(chunk.content)
                     if text:
@@ -806,8 +923,11 @@ class Assistant:
 
             # region ---------------------------- 有工具时按轮执行 ----------------------------
             else:
+                llm_with_tools = self._ensure_tools_bound()
+                if llm_with_tools is None:
+                    raise RuntimeError("当前助手没有绑定工具")
                 for _ in range(self.max_tool_rounds):
-                    ai_message = self._llm_with_tools.invoke(self._build_messages())
+                    ai_message = llm_with_tools.invoke(self._build_messages())
                     self.history.append(ai_message)
                     if getattr(ai_message, "invalid_tool_calls", None):
                         raise RuntimeError(
@@ -1038,45 +1158,74 @@ class Assistant:
             return self._history_summary
         return self._content_to_text(response.content).strip()
 
-    def chat_structured(self, prompt: str, schema: Any, **kwargs: Any) -> Any:
-        """按给定结构返回结果, 不写入历史, 也不调用工具
-
-        适合做信息提取, 分类和表单填充. 需要模型支持 with_structured_output.
+    def _invoke_structured(
+        self,
+        prompt: str,
+        schema: Any,
+        save_history: bool,
+        **kwargs: Any,
+    ) -> Any:
+        """执行结构化输出, 按 save_history 决定是否写入历史
 
         Args:
             prompt (str): 用户输入
-            schema (Any): Pydantic 模型, dict schema 或其他 with_structured_output 支持的类型
+            schema (Any): 结构化输出的目标类型
+            save_history (bool): 是否把本轮消息写入历史
             **kwargs (Any): 原样传给 with_structured_output
 
         Returns:
             Any: 按 schema 解析后的结果
-
-        Raises:
-            ValueError: prompt 为空, 或模型不支持结构化输出
         """
-        if not isinstance(prompt, str) or not prompt.strip():
-            raise ValueError("prompt 不能为空")
         structured_llm = self._create_structured_llm(schema, **kwargs)
-        return structured_llm.invoke(self._build_structured_messages(prompt))
+        if save_history:
+            self._trim_history()
+        result = structured_llm.invoke(self._build_structured_messages(prompt))
+        if save_history:
+            self.history.append(HumanMessage(content=prompt))
+            self.history.append(AIMessage(content=self._structured_to_text(result)))
+        return result
 
-    async def achat_structured(self, prompt: str, schema: Any, **kwargs: Any) -> Any:
-        """chat_structured 的异步版本
+    async def _ainvoke_structured(
+        self,
+        prompt: str,
+        schema: Any,
+        save_history: bool,
+        **kwargs: Any,
+    ) -> Any:
+        """_invoke_structured 的异步版本"""
+        structured_llm = self._create_structured_llm(schema, **kwargs)
+        if save_history:
+            self._trim_history()
+        result = await structured_llm.ainvoke(self._build_structured_messages(prompt))
+        if save_history:
+            self.history.append(HumanMessage(content=prompt))
+            self.history.append(AIMessage(content=self._structured_to_text(result)))
+        return result
+
+    @staticmethod
+    def _structured_to_text(result: Any) -> str:
+        """把结构化结果转成可写入历史的文本
 
         Args:
-            prompt (str): 用户输入
-            schema (Any): Pydantic 模型, dict schema 或其他 with_structured_output 支持的类型
-            **kwargs (Any): 原样传给 with_structured_output
+            result (Any): with_structured_output 返回的结果
 
         Returns:
-            Any: 按 schema 解析后的结果
-
-        Raises:
-            ValueError: prompt 为空, 或模型不支持结构化输出
+            str: JSON 文本, 无法序列化时退回 str()
         """
-        if not isinstance(prompt, str) or not prompt.strip():
-            raise ValueError("prompt 不能为空")
-        structured_llm = self._create_structured_llm(schema, **kwargs)
-        return await structured_llm.ainvoke(self._build_structured_messages(prompt))
+        if isinstance(result, str):
+            return result
+        model_dump = getattr(result, "model_dump", None)
+        if callable(model_dump):
+            try:
+                return json.dumps(model_dump(), ensure_ascii=False, default=str)
+            except (TypeError, ValueError):
+                pass
+        if isinstance(result, (dict, list)):
+            try:
+                return json.dumps(result, ensure_ascii=False, default=str)
+            except (TypeError, ValueError):
+                pass
+        return str(result)
 
     def _create_structured_llm(self, schema: Any, **kwargs: Any) -> Runnable[Any, Any]:
         """创建带结构化输出能力的模型, 并统一错误提示"""
@@ -1145,7 +1294,7 @@ class Assistant:
 
         Raises:
             FileNotFoundError: 路径不存在
-            ValueError: 技能名称重复, 工具名称冲突, 或模型不支持工具调用
+            ValueError: 技能名称重复, 或工具名称冲突
         """
         if isinstance(skills, SkillLibrary):
             new_library = skills
@@ -1162,13 +1311,13 @@ class Assistant:
             merged.merge(new_library)
 
         skill_tools = self._build_skill_tools(merged)
-        tools, tool_map, llm_with_tools = self._prepare_tools(skill_tools)
+        tools, tool_map = self._prepare_tools(skill_tools)
 
         self.skill_library = merged
         self._skill_tools = skill_tools
         self._tools = tools
         self._tool_map = tool_map
-        self._llm_with_tools = llm_with_tools
+        self._llm_with_tools = None # 工具变了, 下次对话时重新绑定
         return new_library.names()
 
     def refresh_skills(self) -> List[str]:
@@ -1191,7 +1340,7 @@ class Assistant:
     def _create_knowledge_base(
         self,
         path: Union[str, Path],
-        provider: str,
+        provider: Optional[str],
         api_key: Optional[str],
         base_url: Optional[str],
         embed_provider: Optional[str],
@@ -1201,7 +1350,7 @@ class Assistant:
 
         Args:
             path (Union[str, Path]): 要导入的文件或目录
-            provider (str): 聊天提供商
+            provider (Optional[str]): 聊天提供商, 直接传入 llm 时为 None
             api_key (Optional[str]): 聊天模型密钥
             base_url (Optional[str]): 聊天接口地址, 和向量提供商相同时复用
             embed_provider (Optional[str]): 向量提供商, 不传时优先用聊天提供商
@@ -1211,7 +1360,7 @@ class Assistant:
             KnowledgeBase: 已经导入文档的知识库
 
         Raises:
-            ValueError: 聊天提供商没有向量接口, 且没有指定 embed_provider
+            ValueError: 聊天提供商没有向量接口, 或直接传入 llm 时没有指定 embed_provider
             FileNotFoundError: docs 路径不存在
         """
         target = Path(path).expanduser()
@@ -1220,24 +1369,29 @@ class Assistant:
 
         # 聊天提供商自带向量接口时直接复用, 否则必须单独指定向量提供商
         if embed_provider is None:
+            if provider is None:
+                raise ValueError(
+                    "传入 llm 时使用 docs 需要指定 embed_provider, "
+                    "或直接传入现成的 KnowledgeBase"
+                )
             if provider not in EMBEDDING_PROVIDERS:
                 supported = ", ".join(EMBEDDING_PROVIDERS)
                 raise ValueError(
                     f"{provider} 没有向量接口, 使用 docs 时请传 embed_provider, "
                     f"可选值: {supported}"
                 )
-            embeddings = create_embeddings(provider, api_key=api_key, base_url=base_url)
+            embeddings = create_embeddings_llm(provider, api_key=api_key, base_url=base_url)
         else:
             embed_name = _normalize_name(embed_provider)
-            if embed_name == provider:
+            if provider is not None and embed_name == provider:
                 # 同一家厂商时沿用聊天模型的密钥和接口地址
-                embeddings = create_embeddings(
+                embeddings = create_embeddings_llm(
                     embed_provider,
                     api_key=api_key,
                     base_url=base_url,
                 )
             else:
-                embeddings = create_embeddings(embed_provider)
+                embeddings = create_embeddings_llm(embed_provider)
 
         knowledge_base = KnowledgeBase(embeddings, persist_directory=persist_directory)
         knowledge_base.add_path(target)
@@ -1417,30 +1571,47 @@ class Assistant:
     def _prepare_tools(
         self,
         skill_tools: List[BaseTool],
-    ) -> Tuple[List[BaseTool], Dict[str, BaseTool], Optional[Runnable[Any, AIMessage]]]:
-        """合并使用者工具和技能工具, 并绑定到模型
+    ) -> Tuple[List[BaseTool], Dict[str, BaseTool]]:
+        """合并使用者工具和技能工具
 
         使用者工具是模型可以请求执行的函数, 技能工具只读取说明, 两者合并后一起告诉模型.
+        这里只合并, 不绑定; 真正需要工具时由 _ensure_tools_bound 绑定.
 
         Args:
             skill_tools (List[BaseTool]): skills 自带的只读工具
 
         Returns:
-            Tuple[List[BaseTool], Dict[str, BaseTool], Optional[Runnable[Any, AIMessage]]]:
-                全部工具, 工具名称映射和绑定工具后的模型
+            Tuple[List[BaseTool], Dict[str, BaseTool]]: 全部工具和工具名称映射
 
         Raises:
-            ValueError: 工具名称重复, 或模型不支持工具调用
+            ValueError: 工具名称重复
         """
         tools = self._wrap_tools([*self._user_tools, *self._mcp_tools, *skill_tools])
-        try:
-            llm_with_tools = self.llm.bind_tools(tools) if tools else None
-        except NotImplementedError as e:
-            raise ValueError(
-                "当前模型不支持工具调用, 请换用支持 bind_tools 的聊天模型"
-            ) from e
         tool_map = {tool.name: tool for tool in tools}
-        return tools, tool_map, llm_with_tools
+        return tools, tool_map
+
+    def _ensure_tools_bound(self) -> Optional[Runnable[Any, AIMessage]]:
+        """首次真正需要工具时再绑定, 并缓存绑定结果
+
+        延迟绑定可以避免 use_tools=False 的调用因为模型不支持 bind_tools 而在
+        初始化阶段失败, 例如 create_fake_llm() 创建的假模型.
+
+        Returns:
+            Optional[Runnable[Any, AIMessage]]: 绑定工具后的模型, 没有工具时返回 None
+
+        Raises:
+            ValueError: 模型不支持工具调用
+        """
+        if not self._tools:
+            return None
+        if self._llm_with_tools is None:
+            try:
+                self._llm_with_tools = self.llm.bind_tools(self._tools)
+            except (AttributeError, NotImplementedError) as e:
+                raise ValueError(
+                    "当前模型不支持工具调用, 请换用支持 bind_tools 的聊天模型"
+                ) from e
+        return self._llm_with_tools
 
     def _wrap_tools(
         self,
@@ -1571,13 +1742,15 @@ class Assistant:
         模型只负责提出调用, 函数由 _run_tool_calls 在你的进程里真正执行.
 
         Raises:
+            ValueError: 模型不支持工具调用
             RuntimeError: 工具调用超过轮数上限, 或模型生成了无法执行的工具调用
         """
-        if self._llm_with_tools is None:
+        llm_with_tools = self._ensure_tools_bound()
+        if llm_with_tools is None:
             raise RuntimeError("当前助手没有绑定工具")
 
         for _ in range(self.max_tool_rounds):
-            ai_message = self._llm_with_tools.invoke(self._build_messages())
+            ai_message = llm_with_tools.invoke(self._build_messages())
             self.history.append(ai_message) # 先保存模型回复, 工具结果才能按 id 对应上
 
             if getattr(ai_message, "invalid_tool_calls", None):
@@ -1596,11 +1769,12 @@ class Assistant:
 
     async def _achat_with_tools(self) -> str:
         """异步工具调用循环, 直到模型不再请求工具"""
-        if self._llm_with_tools is None:
+        llm_with_tools = self._ensure_tools_bound()
+        if llm_with_tools is None:
             raise RuntimeError("当前助手没有绑定工具")
 
         for _ in range(self.max_tool_rounds):
-            ai_message = await self._llm_with_tools.ainvoke(self._build_messages())
+            ai_message = await llm_with_tools.ainvoke(self._build_messages())
             self.history.append(ai_message) # 先保存模型回复, 工具结果才能按 id 对应上
 
             if getattr(ai_message, "invalid_tool_calls", None):
@@ -2099,7 +2273,7 @@ class KnowledgeBase:
         """创建知识库, 传了 persist_directory 时会加载已有索引
 
         Args:
-            embeddings (Embeddings): 向量模型, 用 create_embeddings 创建
+            embeddings (Embeddings): 向量模型, 用 create_embeddings_llm 创建
             chunk_size (int): 每块文本的最大字符数. Defaults to 800.
             chunk_overlap (int): 相邻两块重复的字符数. Defaults to 100.
             persist_directory (Optional[Union[str, Path]]): 索引保存目录. Defaults to None,
@@ -2698,19 +2872,20 @@ def _resolve_api_key(
         api_key (Optional[str]): 调用方传入的密钥
 
     Returns:
-        Optional[str]: 最终使用的密钥, 不需要密钥时返回 None
+        Optional[str]: 最终使用的密钥, 不需要密钥时返回 fallback 或 None
 
     Raises:
         ValueError: 需要密钥但参数和环境变量都没有
     """
-    if not config["requires_api_key"]:
-        return None
     # 参数优先, 没有参数时再读对应的环境变量
     env_key = os.getenv(config["env"]) if config["env"] else None
     resolved_key = (api_key or "").strip() or (env_key or "").strip()
-    if not resolved_key:
+    if resolved_key:
+        return resolved_key
+    if config["requires_api_key"]:
         raise ValueError(f"使用 {provider} 需要提供 api_key, 或设置环境变量 {config['env']}")
-    return resolved_key
+    # 本地网关通常不校验密钥, 用占位符满足 OpenAI 客户端的必填检查
+    return config.get("api_key_fallback")
 
 
 def _load_component_class(
@@ -2747,24 +2922,43 @@ def create_llm(
     """按提供商创建聊天模型
 
     Args:
-        provider (str): openai, deepseek, qwen, moonshot, zhipu, anthropic, google,
-            ollama, openrouter, siliconflow
-        api_key (Optional[str]): API 密钥, 不传时读取对应的环境变量, Ollama 不需要
-        model (Optional[str]): 模型名称, 不传时使用预置默认值
-        base_url (Optional[str]): 接口地址, 不传时使用预置默认值
+        provider (str): openai, openai_compatible, deepseek, qwen, moonshot, zhipu,
+            anthropic, google, ollama, openrouter, siliconflow
+        api_key (Optional[str]): API 密钥, 不传时读取对应的环境变量.
+            openai_compatible 和 Ollama 可以不传
+        model (Optional[str]): 模型名称, 不传时使用预置默认值.
+            openai_compatible 没有默认模型, 必须显式传入
+        base_url (Optional[str]): 接口地址, 不传时使用预置默认值.
+            openai_compatible 用它填写中转站或本地网关的 OpenAI 格式地址
         **kwargs (Any): 其他参数, 原样传给对应的 LangChain 模型类
 
     Returns:
         BaseChatModel: LangChain 聊天模型
 
     Raises:
-        ValueError: 提供商不支持, 或缺少必需的 API 密钥
+        ValueError: 提供商不支持, 缺少必需的 API 密钥, 或缺少必需的模型名称
         ImportError: 对应的 LangChain 集成包未安装
+
+    Example:
+        >>> create_llm(
+        ...     "openai_compatible",
+        ...     base_url="https://relay.example.com/v1",
+        ...     api_key="sk-...",
+        ...     model="gpt-4o-mini",
+        ... )
+        >>> create_llm(
+        ...     "openai",
+        ...     base_url="https://relay.example.com/v1",
+        ...     api_key="sk-...",
+        ...     model="gpt-4o-mini",
+        ... )  # 原来的写法也支持自定义 base_url
     """
     provider_name = _normalize_provider(provider)
     config = PROVIDERS[provider_name]
 
     resolved_model = model or config["model"]
+    if not resolved_model:
+        raise ValueError(f"使用 {provider_name} 时必须提供 model")
     resolved_base_url = base_url or config["base_url"]
     resolved_key = _resolve_api_key(provider_name, config, api_key)
     chat_class = _load_component_class(config, provider_name, "聊天模型")
@@ -2778,7 +2972,7 @@ def create_llm(
     return chat_class(**params)
 
 
-def create_embeddings(
+def create_embeddings_llm(
     provider: str,
     api_key: Optional[str] = None,
     model: Optional[str] = None,
@@ -2847,6 +3041,10 @@ def create_fake_llm(
         >>> llm = create_fake_llm(["你好"])
         >>> llm.invoke("hi").content
         '你好'
+        >>> from LangChainToolKit import Assistant
+        >>> assistant = Assistant(llm=llm)
+        >>> assistant.chat("hi")
+        '你好'
     """
     if responses is None:
         responses = list(DEFAULT_FAKE_RESPONSES)
@@ -2900,7 +3098,7 @@ def create_knowledge_base(
         if not target.exists():
             raise FileNotFoundError(f"路径不存在: {target}")
 
-    embeddings = create_embeddings(
+    embeddings = create_embeddings_llm(
         provider,
         api_key=api_key,
         model=model,
