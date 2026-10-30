@@ -2,72 +2,21 @@
 
 """LangChain 大模型工具 LangChainToolKit
 
-最常用:
+把模型, 工具, 本地技能/文档和知识库包成一个 Assistant:
     >>> from LangChainToolKit import Assistant
     >>> Assistant("deepseek").chat("你好")
-
-按需加能力:
     >>> Assistant("qwen", tools=[get_weather]).chat("北京天气")
-    >>> Assistant("qwen", skills="./skills").chat("帮我处理这个 PDF")
-    >>> Assistant("qwen", docs="./docs").chat("总结这些文档")
+    >>> Assistant("qwen", docs="./docs", embed_provider="qwen").chat("总结这些文档")
+    >>> Assistant("qwen", model="qwen-vl-max").chat("图中有什么?", images=["./a.png"])
 
-三个概念:
-    tools  模型可以调用的函数, 需要 docstring 和类型注解
-    skills 说明和资源, 默认只读, 模型通过 load_skill 查看
-    docs   本地文档, 默认作为参考放进系统提示词
-
-安全开关 allow_execute 默认关闭:
-    关闭时 skills/docs 只作参考, 脚本不会执行
-    打开后才允许模型遵循其中的指令, 并可运行 skill 目录里的 .py 脚本
-    >>> Assistant("qwen", skills="./skills", allow_execute=True)
+tools 是模型可以调用的函数, 需要 docstring 和类型注解; skills 是只读的说明和资源,
+打开 allow_execute 后才允许模型遵循其中的指令并运行 skill 目录里的脚本;
+docs 是本地文档, 检索后放进提示词.
 
 脚本不会自动执行. 不想打开 allow_execute 时, 可以先把动作包成函数, 再传给 tools.
-
-DeepSeek 没有向量接口, 使用 docs 时指定向量提供商:
-    >>> Assistant("deepseek", docs="./docs", embed_provider="qwen").chat("...")
-
-知识库持久化和增量索引:
-    >>> Assistant(
-    ...     "qwen",
-    ...     docs="./docs",
-    ...     docs_persist_directory="./.kb",
-    ... ).chat("总结这些文档")
-
-进阶用法:
-    >>> assistant = Assistant("qwen", approve_tool=confirm, max_tool_output=8000)
-    >>> assistant.last_tool_calls          # 最近一次对话调用了哪些工具
-    >>> assistant.save_history("session.json")
-    >>> assistant.load_history("session.json")
-    >>> Assistant("qwen", max_history_messages=40, summarize_history=True)
-    >>> assistant.chat("提取发票信息: ...", schema=Invoice)  # 按结构返回
-    >>> assistant.chat("这句不调工具", use_tools=False)
-    >>> assistant.chat("这句不写历史", save_history=False)
-    >>> import asyncio
-    >>> asyncio.run(assistant.achat("你好"))  # 异步
-    >>> async def demo():
-    ...     async for text in assistant.astream("你好"):
-    ...         print(text, end="")
-    >>> asyncio.run(demo())
-    >>> for event in assistant.stream_events("你好"): ...  # 前端事件流
-    >>> create_mcp_tools(
-    ...     {"weather": {"transport": "stdio", "command": "python", "args": ["server.py"]}}
-    ... )
-
-高级用法:
-    >>> from LangChainToolKit import (
-    ...     Assistant, create_llm, create_embeddings_llm, create_knowledge_base,
-    ...     create_fake_llm,
-    ... )
-    >>> llm = create_llm("deepseek")
-    >>> assistant = Assistant(llm=create_fake_llm(["你好"]))  # 直接传现成模型
-    >>> relay_llm = create_llm(
-    ...     "openai_compatible",
-    ...     base_url="https://relay.example.com/v1",
-    ...     api_key="sk-...",
-    ...     model="gpt-4o-mini",
-    ... )
-    >>> embeddings = create_embeddings_llm("qwen")
-    >>> kb = create_knowledge_base("qwen", path="./docs")
+DeepSeek 没有向量接口, 使用 docs 时用 embed_provider 指定向量提供商.
+图片输入要求模型支持视觉, DeepSeek 默认模型等纯文本模型会报错, Ollama 还只接受
+本地图片或 bytes.
 
 安装:
     pip install langchain langchain-openai
@@ -78,6 +27,8 @@ DeepSeek 没有向量接口, 使用 docs 时指定向量提供商:
     pip install langchain-ollama               # Ollama
     pip install langchain-mcp-adapters         # MCP 工具 (可选)
     pip install pypdf                          # 读取 PDF (可选)
+
+更多用法见 Assistant 类和各个方法的 docstring.
 """
 
 # ------------ common ------------
@@ -85,11 +36,15 @@ import os
 import sys
 import json
 import uuid
+import base64
+import binascii
 import asyncio
 import hashlib
+import mimetypes
 import subprocess
 import importlib
 from pathlib import Path
+from urllib.parse import urlparse
 from concurrent.futures import ThreadPoolExecutor
 from typing import (
     Any,
@@ -151,8 +106,21 @@ DEFAULT_MAX_TOOL_ROUNDS = 5 # 一次对话最多执行几轮工具调用, 防止
 DEFAULT_SCRIPT_TIMEOUT = 30 # skill 脚本的默认超时时间 (秒)
 DEFAULT_MAX_TOOL_OUTPUT = 8000 # 单个工具结果默认保留的字符数
 MAX_SCRIPT_OUTPUT = 8000 # skill 脚本输出的最大字符数, 超出部分截断
+MAX_IMAGE_BYTES = 20 * 1024 * 1024 # 单张图片默认上限 20MB, 多数视觉模型也在此范围内
 
 SKILL_FILE_NAME = "SKILL.md" # 技能说明的固定文件名
+
+# 视觉接口普遍支持的图片格式, 其他格式先拒绝, 避免请求发出后才报错
+SUPPORTED_IMAGE_MIME_TYPES = {
+    "image/png", "image/jpeg", "image/gif", "image/webp"
+}
+IMAGE_MIME_ALIASES = {
+    "image/jpg": "image/jpeg",
+    "image/pjpeg": "image/jpeg",
+    "image/x-png": "image/png",
+}
+# 历史保存时可以按需剥离的内容块类型
+MEDIA_BLOCK_TYPES = {"image", "audio", "video", "file"}
 
 # 可以直接按文本读取的文件类型, PDF 单独处理
 TEXT_FILE_SUFFIXES = {
@@ -162,6 +130,11 @@ TEXT_FILE_SUFFIXES = {
 
 # 工具是模型可以调用的函数. 普通函数会被包装成 BaseTool, 脚本路径不是工具
 ToolLike = Union[Callable[..., Any], BaseTool]
+
+# 图片可以是本地路径, http(s)/data URL, 原始字节或标准图片内容块
+# 手里只有纯 base64 字符串时, 先解码成 bytes, 或者自己拼成标准图片内容块
+ImageLike = Union[str, Path, bytes, Dict[str, Any]]
+ImagesLike = Union[ImageLike, Sequence[ImageLike]]
 
 # 每个提供商包含: 默认模型, 接口地址, 环境变量名, 是否需要 api-key, 集成包信息和创建参数名
 PROVIDERS: Dict[str, Dict[str, Any]] = {
@@ -400,11 +373,14 @@ class Assistant:
 
     需要时还能审批工具, 截断工具输出, 保存和裁剪历史, 做结构化输出,
     使用异步接口和事件流, 或通过 mcp_servers 接入 MCP 工具.
+    对话入口支持 images 参数, 可以把图片作为多模态输入传给模型.
 
     Attributes:
         history (List[BaseMessage]): 当前对话消息
         last_sources (List[Document]): 最近一次检索到的资料
         last_tool_calls (List[Dict[str, Any]]): 最近一次对话的工具调用记录
+        last_response (Optional[AIMessage]): 最近一次对话的原始模型回复,
+            模型返回图片等非文本内容时从 content 里读取
 
     Example:
         >>> assistant = Assistant("deepseek")
@@ -559,6 +535,7 @@ class Assistant:
         self.max_history_messages = max_history_messages # 历史消息条数上限
         self.summarize_history = summarize_history # 裁剪历史时是否生成摘要
         self.last_tool_calls: List[Dict[str, Any]] = [] # 最近一次对话的工具调用记录
+        self.last_response: Optional[AIMessage] = None # 最近一次对话的原始模型回复
         self._history_summary = "" # 被裁掉的历史摘要, 会作为系统消息带上
         # endregion ---------------------------- 保存助手配置 ----------------------------
 
@@ -607,6 +584,7 @@ class Assistant:
         prompt: str,
         schema: Any = None,
         *,
+        images: Optional[ImagesLike] = None,
         use_tools: bool = True,
         save_history: bool = True,
         **kwargs: Any,
@@ -620,6 +598,9 @@ class Assistant:
             prompt (str): 用户输入
             schema (Any): Pydantic 模型, dict schema 或其他 with_structured_output
                 支持的类型. 传入时返回结构化结果, 不调用工具
+            images (Optional[ImagesLike]): 一张或多张图片, 支持本地路径, http(s)/data URL,
+                bytes 和标准 image 内容块. Defaults to None.
+                模型必须支持视觉, 图片不会写进 docs 知识库
             use_tools (bool): 是否允许模型调用工具. Defaults to True.
                 schema 不为 None 时忽略
             save_history (bool): 是否把本轮消息写入历史. Defaults to True.
@@ -627,11 +608,16 @@ class Assistant:
             **kwargs (Any): 只在 schema 不为 None 时使用, 原样传给 with_structured_output
 
         Returns:
-            Any: 没有 schema 时返回文本, 有 schema 时返回解析后的结构化结果
+            Any: 没有 schema 时返回文本, 有 schema 时返回解析后的结构化结果.
+                模型返回图片等非文本内容时, chat 只返回文字, 原始内容块从
+                last_response.content 读取
 
         Raises:
-            ValueError: prompt 为空, 参数类型不对, 额外参数没有配合 schema 使用,
+            ValueError: prompt 为空, 额外参数没有配合 schema 使用, 图片格式或大小不合法,
                 或模型不支持结构化输出
+            TypeError: use_tools 或 save_history 不是 bool, 或图片类型不支持
+            FileNotFoundError: 图片路径不存在
+            OSError: 本地图片无法读取
             RuntimeError: 工具调用超过 max_tool_rounds, 或模型生成了无法执行的工具调用
         """
         if not isinstance(prompt, str) or not prompt.strip():
@@ -642,11 +628,13 @@ class Assistant:
             raise TypeError("save_history 必须是 bool")
 
         self.last_tool_calls = []
+        self.last_response = None
         if schema is not None:
             return self._invoke_structured(
                 prompt,
                 schema,
                 save_history=save_history,
+                images=images,
                 **kwargs,
             )
         if kwargs:
@@ -657,12 +645,13 @@ class Assistant:
         start = len(self.history) # 本轮消息的起点, 出错时只回滚到这里
         is_success = False # 只有完整结束才保留本轮历史
         try:
-            self._prepare(prompt)
+            self._prepare(prompt, images)
             if use_tools and self._tools:
                 result = self._chat_with_tools()
             else:
                 ai_message = self.llm.invoke(self._build_messages())
                 self.history.append(ai_message)
+                self.last_response = ai_message
                 result = self._content_to_text(ai_message.content)
             is_success = True
             return result
@@ -671,24 +660,34 @@ class Assistant:
                 # 中途报错或流式输出被提前关闭时, 回滚本轮加入的消息
                 del self.history[start:]
                 self.last_sources = []
+                self.last_response = None
             elif not save_history:
                 # 本轮只是临时对话, 结束后不留下任何消息
                 del self.history[start:]
 
-    def chat_with_sources(self, prompt: str) -> Tuple[str, List[Document]]:
+    def chat_with_sources(
+        self,
+        prompt: str,
+        *,
+        images: Optional[ImagesLike] = None,
+    ) -> Tuple[str, List[Document]]:
         """发送一条消息, 同时返回回复和本次检索到的资料
 
         Args:
             prompt (str): 用户输入
+            images (Optional[ImagesLike]): 一张或多张图片, 用法和 chat 相同
 
         Returns:
             Tuple[str, List[Document]]: 模型回复和资料块列表
 
         Raises:
-            ValueError: prompt 为空
+            ValueError: prompt 为空, 或图片格式不合法
+            TypeError: 图片类型不支持
+            FileNotFoundError: 图片路径不存在
+            OSError: 本地图片无法读取
             RuntimeError: 工具调用超过轮数上限, 或模型生成了无法执行的工具调用
         """
-        answer = self.chat(prompt)
+        answer = self.chat(prompt, images=images)
         return answer, list(self.last_sources)
 
     def sources_text(self, max_chars: int = 200) -> str:
@@ -724,54 +723,69 @@ class Assistant:
             lines.append(f"[{index}] {source}{suffix}: {snippet}")
         return "\n".join(lines)
 
-    def stream(self, prompt: str) -> Iterator[str]:
+    def stream(
+        self,
+        prompt: str,
+        *,
+        images: Optional[ImagesLike] = None,
+    ) -> Iterator[str]:
         """流式发送一条消息, 逐段返回模型回复
 
         有工具或 skills 时无法真正流式输出, 会先拿到完整回复再一次性返回.
         中途停止遍历不会把这一轮写进历史.
+        流式接口只返回文本; 需要获取模型返回的图片时请用 chat 和 last_response.
 
         Args:
             prompt (str): 用户输入
+            images (Optional[ImagesLike]): 一张或多张图片, 用法和 chat 相同
 
         Yields:
             str: 模型回复的文本片段
 
         Raises:
-            ValueError: prompt 为空
+            ValueError: prompt 为空, 或图片格式不合法
+            TypeError: 图片类型不支持
+            FileNotFoundError: 图片路径不存在
+            OSError: 本地图片无法读取
             RuntimeError: 工具调用超过轮数上限, 或模型生成了无法执行的工具调用
         """
         if not isinstance(prompt, str) or not prompt.strip():
             raise ValueError("prompt 不能为空")
 
         if self._tools:
-            yield self.chat(prompt)
+            yield self.chat(prompt, images=images)
             return
 
         self.last_tool_calls = []
+        self.last_response = None
         self._trim_history()
         start = len(self.history) # 本轮消息的起点, 出错时只回滚到这里
         is_success = False # 只有完整结束才保留本轮历史
         parts: List[str] = []
         try:
-            self._prepare(prompt)
+            self._prepare(prompt, images)
             for chunk in self.llm.stream(self._build_messages()):
                 text = self._content_to_text(chunk.content)
                 if text:
                     parts.append(text)
                     yield text
-            self.history.append(AIMessage(content="".join(parts)))
+            ai_message = AIMessage(content="".join(parts))
+            self.history.append(ai_message)
+            self.last_response = ai_message
             is_success = True
         finally:
             if not is_success:
                 # 中途报错或流式输出被提前关闭时, 回滚本轮加入的消息
                 del self.history[start:]
                 self.last_sources = []
+                self.last_response = None
 
     async def achat(
         self,
         prompt: str,
         schema: Any = None,
         *,
+        images: Optional[ImagesLike] = None,
         use_tools: bool = True,
         save_history: bool = True,
         **kwargs: Any,
@@ -782,6 +796,7 @@ class Assistant:
             prompt (str): 用户输入
             schema (Any): Pydantic 模型, dict schema 或其他 with_structured_output
                 支持的类型. 传入时返回结构化结果, 不调用工具
+            images (Optional[ImagesLike]): 一张或多张图片, 用法和 chat 相同
             use_tools (bool): 是否允许模型调用工具. Defaults to True.
                 schema 不为 None 时忽略
             save_history (bool): 是否把本轮消息写入历史. Defaults to True.
@@ -789,11 +804,15 @@ class Assistant:
             **kwargs (Any): 只在 schema 不为 None 时使用, 原样传给 with_structured_output
 
         Returns:
-            Any: 没有 schema 时返回文本, 有 schema 时返回解析后的结构化结果
+            Any: 没有 schema 时返回文本, 有 schema 时返回解析后的结构化结果.
+                模型返回图片等非文本内容时, 原始内容块从 last_response.content 读取
 
         Raises:
-            ValueError: prompt 为空, 参数类型不对, 额外参数没有配合 schema 使用,
+            ValueError: prompt 为空, 额外参数没有配合 schema 使用, 图片格式或大小不合法,
                 或模型不支持结构化输出
+            TypeError: use_tools 或 save_history 不是 bool, 或图片类型不支持
+            FileNotFoundError: 图片路径不存在
+            OSError: 本地图片无法读取
             RuntimeError: 工具调用超过 max_tool_rounds, 或模型生成了无法执行的工具调用
         """
         if not isinstance(prompt, str) or not prompt.strip():
@@ -804,11 +823,13 @@ class Assistant:
             raise TypeError("save_history 必须是 bool")
 
         self.last_tool_calls = []
+        self.last_response = None
         if schema is not None:
             return await self._ainvoke_structured(
                 prompt,
                 schema,
                 save_history=save_history,
+                images=images,
                 **kwargs,
             )
         if kwargs:
@@ -819,12 +840,13 @@ class Assistant:
         start = len(self.history) # 本轮消息的起点, 出错时只回滚到这里
         is_success = False # 只有完整结束才保留本轮历史
         try:
-            self._prepare(prompt)
+            self._prepare(prompt, images)
             if use_tools and self._tools:
                 result = await self._achat_with_tools()
             else:
                 ai_message = await self.llm.ainvoke(self._build_messages())
                 self.history.append(ai_message)
+                self.last_response = ai_message
                 result = self._content_to_text(ai_message.content)
             is_success = True
             return result
@@ -833,53 +855,73 @@ class Assistant:
                 # 中途报错或流式输出被提前关闭时, 回滚本轮加入的消息
                 del self.history[start:]
                 self.last_sources = []
+                self.last_response = None
             elif not save_history:
                 # 本轮只是临时对话, 结束后不留下任何消息
                 del self.history[start:]
 
-    async def astream(self, prompt: str) -> AsyncIterator[str]:
+    async def astream(
+        self,
+        prompt: str,
+        *,
+        images: Optional[ImagesLike] = None,
+    ) -> AsyncIterator[str]:
         """stream 的异步版本, 逐段返回模型回复
 
         有工具或 skills 时无法真正流式输出, 会先拿到完整回复再一次性返回.
+        流式接口只返回文本; 需要获取模型返回的图片时请用 achat 和 last_response.
 
         Args:
             prompt (str): 用户输入
+            images (Optional[ImagesLike]): 一张或多张图片, 用法和 chat 相同
 
         Yields:
             str: 模型回复的文本片段
 
         Raises:
-            ValueError: prompt 为空
+            ValueError: prompt 为空, 或图片格式不合法
+            TypeError: 图片类型不支持
+            FileNotFoundError: 图片路径不存在
+            OSError: 本地图片无法读取
             RuntimeError: 工具调用超过轮数上限, 或模型生成了无法执行的工具调用
         """
         if not isinstance(prompt, str) or not prompt.strip():
             raise ValueError("prompt 不能为空")
 
         if self._tools:
-            yield await self.achat(prompt)
+            yield await self.achat(prompt, images=images)
             return
 
         self.last_tool_calls = []
+        self.last_response = None
         self._trim_history()
         start = len(self.history) # 本轮消息的起点, 出错时只回滚到这里
         is_success = False # 只有完整结束才保留本轮历史
         parts: List[str] = []
         try:
-            self._prepare(prompt)
+            self._prepare(prompt, images)
             async for chunk in self.llm.astream(self._build_messages()):
                 text = self._content_to_text(chunk.content)
                 if text:
                     parts.append(text)
                     yield text
-            self.history.append(AIMessage(content="".join(parts)))
+            ai_message = AIMessage(content="".join(parts))
+            self.history.append(ai_message)
+            self.last_response = ai_message
             is_success = True
         finally:
             if not is_success:
                 # 中途报错或流式输出被提前关闭时, 回滚本轮加入的消息
                 del self.history[start:]
                 self.last_sources = []
+                self.last_response = None
 
-    def stream_events(self, prompt: str) -> Iterator[Dict[str, Any]]:
+    def stream_events(
+        self,
+        prompt: str,
+        *,
+        images: Optional[ImagesLike] = None,
+    ) -> Iterator[Dict[str, Any]]:
         """流式返回结构化事件, 方便前端显示打字机和工具状态
 
         事件类型:
@@ -891,24 +933,29 @@ class Assistant:
 
         Args:
             prompt (str): 用户输入
+            images (Optional[ImagesLike]): 一张或多张图片, 用法和 chat 相同
 
         Yields:
             Dict[str, Any]: 事件字典, 至少包含 type 字段
 
         Raises:
-            ValueError: prompt 为空
+            ValueError: prompt 为空, 或图片格式不合法
+            TypeError: 图片类型不支持
+            FileNotFoundError: 图片路径不存在
+            OSError: 本地图片无法读取
             RuntimeError: 工具调用超过轮数上限, 或模型生成了无法执行的工具调用
         """
         if not isinstance(prompt, str) or not prompt.strip():
             raise ValueError("prompt 不能为空")
 
         self.last_tool_calls = []
+        self.last_response = None
         self._trim_history()
         start = len(self.history) # 本轮消息的起点, 出错时只回滚到这里
         is_success = False # 只有完整结束才保留本轮历史
         parts: List[str] = []
         try:
-            self._prepare(prompt)
+            self._prepare(prompt, images)
             yield {"type": "start"}
 
             # region ---------------------------- 没有工具时直接流式输出 ----------------------------
@@ -918,7 +965,9 @@ class Assistant:
                     if text:
                         parts.append(text)
                         yield {"type": "text", "text": text}
-                self.history.append(AIMessage(content="".join(parts)))
+                ai_message = AIMessage(content="".join(parts))
+                self.history.append(ai_message)
+                self.last_response = ai_message
             # endregion ---------------------------- 没有工具时直接流式输出 ----------------------------
 
             # region ---------------------------- 有工具时按轮执行 ----------------------------
@@ -936,6 +985,7 @@ class Assistant:
                         )
                     if not ai_message.tool_calls:
                         # 没有新的工具请求, 说明模型已经给出最终回答
+                        self.last_response = ai_message
                         text = self._content_to_text(ai_message.content)
                         if text:
                             parts.append(text)
@@ -989,6 +1039,7 @@ class Assistant:
                 # 中途报错或流式输出被提前关闭时, 回滚本轮加入的消息
                 del self.history[start:]
                 self.last_sources = []
+                self.last_response = None
 
     def reset(self) -> None:
         """清空对话历史, 检索结果和工具调用记录, 保留提示词, skills, 工具和知识库
@@ -1001,26 +1052,38 @@ class Assistant:
         self.history.clear()
         self.last_sources.clear()
         self.last_tool_calls.clear()
+        self.last_response = None
         self._history_summary = ""
 
-    def save_history(self, path: Union[str, Path]) -> "Assistant":
+    def save_history(
+        self,
+        path: Union[str, Path],
+        *,
+        include_media: bool = True,
+    ) -> "Assistant":
         """把对话历史和摘要保存成 JSON 文件
 
         Args:
             path (Union[str, Path]): 保存路径, 父目录会自动创建
+            include_media (bool): 是否把图片等内容块一起保存. Defaults to True.
+                传 False 时只保留文字, 避免 base64 让历史文件过大
 
         Returns:
             Assistant: 当前助手
 
         Raises:
+            TypeError: include_media 不是 bool
             OSError: 文件无法写入
         """
+        if not isinstance(include_media, bool):
+            raise TypeError("include_media 必须是 bool")
         target = Path(path).expanduser()
         target.parent.mkdir(parents=True, exist_ok=True)
+        messages = self.history if include_media else _strip_media_blocks(self.history)
         payload = {
             "version": 1, # 历史文件格式版本, 方便以后兼容旧文件
             "summary": self._history_summary,
-            "messages": [message_to_dict(message) for message in self.history],
+            "messages": [message_to_dict(message) for message in messages],
         }
         target.write_text(
             json.dumps(payload, ensure_ascii=False, indent=2),
@@ -1031,7 +1094,7 @@ class Assistant:
     def load_history(self, path: Union[str, Path]) -> "Assistant":
         """从 JSON 文件恢复对话历史和摘要
 
-        会替换当前历史, 不会恢复 last_sources 和 last_tool_calls.
+        会替换当前历史, 不会恢复 last_sources, last_tool_calls 和 last_response.
 
         Args:
             path (Union[str, Path]): 之前用 save_history 保存的文件
@@ -1075,6 +1138,7 @@ class Assistant:
         self._history_summary = summary
         self.last_sources = []
         self.last_tool_calls = []
+        self.last_response = None
         return self
 
     def _trim_history(self) -> None:
@@ -1163,6 +1227,7 @@ class Assistant:
         prompt: str,
         schema: Any,
         save_history: bool,
+        images: Optional[ImagesLike] = None,
         **kwargs: Any,
     ) -> Any:
         """执行结构化输出, 按 save_history 决定是否写入历史
@@ -1171,17 +1236,25 @@ class Assistant:
             prompt (str): 用户输入
             schema (Any): 结构化输出的目标类型
             save_history (bool): 是否把本轮消息写入历史
+            images (Optional[ImagesLike]): 一张或多张图片, 用法和 chat 相同
             **kwargs (Any): 原样传给 with_structured_output
 
         Returns:
             Any: 按 schema 解析后的结果
+
+        Raises:
+            ValueError: 模型不支持结构化输出, 或图片格式不合法
+            TypeError: 图片类型不支持
+            FileNotFoundError: 图片路径不存在
+            OSError: 本地图片无法读取
         """
+        user_message = _build_user_message(prompt, images)
         structured_llm = self._create_structured_llm(schema, **kwargs)
         if save_history:
             self._trim_history()
-        result = structured_llm.invoke(self._build_structured_messages(prompt))
+        result = structured_llm.invoke(self._build_structured_messages(user_message))
         if save_history:
-            self.history.append(HumanMessage(content=prompt))
+            self.history.append(user_message)
             self.history.append(AIMessage(content=self._structured_to_text(result)))
         return result
 
@@ -1190,15 +1263,36 @@ class Assistant:
         prompt: str,
         schema: Any,
         save_history: bool,
+        images: Optional[ImagesLike] = None,
         **kwargs: Any,
     ) -> Any:
-        """_invoke_structured 的异步版本"""
+        """异步执行结构化输出, 按 save_history 决定是否写入历史
+
+        Args:
+            prompt (str): 用户输入
+            schema (Any): 结构化输出的目标类型
+            save_history (bool): 是否把本轮消息写入历史
+            images (Optional[ImagesLike]): 一张或多张图片, 用法和 chat 相同
+            **kwargs (Any): 原样传给 with_structured_output
+
+        Returns:
+            Any: 按 schema 解析后的结果
+
+        Raises:
+            ValueError: 模型不支持结构化输出, 或图片格式不合法
+            TypeError: 图片类型不支持
+            FileNotFoundError: 图片路径不存在
+            OSError: 本地图片无法读取
+        """
+        user_message = _build_user_message(prompt, images)
         structured_llm = self._create_structured_llm(schema, **kwargs)
         if save_history:
             self._trim_history()
-        result = await structured_llm.ainvoke(self._build_structured_messages(prompt))
+        result = await structured_llm.ainvoke(
+            self._build_structured_messages(user_message)
+        )
         if save_history:
-            self.history.append(HumanMessage(content=prompt))
+            self.history.append(user_message)
             self.history.append(AIMessage(content=self._structured_to_text(result)))
         return result
 
@@ -1228,17 +1322,21 @@ class Assistant:
         return str(result)
 
     def _create_structured_llm(self, schema: Any, **kwargs: Any) -> Runnable[Any, Any]:
-        """创建带结构化输出能力的模型, 并统一错误提示"""
+        """创建带结构化输出能力的模型, 并统一错误提示
+
+        Raises:
+            ValueError: 模型不支持结构化输出
+        """
         try:
             return self.llm.with_structured_output(schema, **kwargs)
         except (AttributeError, NotImplementedError) as e:
             raise ValueError("当前模型不支持结构化输出") from e
 
-    def _build_structured_messages(self, prompt: str) -> List[BaseMessage]:
+    def _build_structured_messages(self, user_message: HumanMessage) -> List[BaseMessage]:
         """组装结构化输出用的消息, 只带系统提示词和历史, 不检索资料
 
         Args:
-            prompt (str): 用户输入
+            user_message (HumanMessage): 已经构造好的本轮用户消息, 可以包含图片
 
         Returns:
             List[BaseMessage]: 本次请求的消息列表
@@ -1258,7 +1356,7 @@ class Assistant:
                 messages.append(message)
             elif isinstance(message, AIMessage) and not message.tool_calls:
                 messages.append(message)
-        messages.append(HumanMessage(content=prompt))
+        messages.append(user_message)
         return messages
 
     def attach_knowledge(self, knowledge_base: "KnowledgeBase") -> "Assistant":
@@ -1414,7 +1512,14 @@ class Assistant:
 
         # region ---------------------------- 内部辅助函数 ----------------------------
         def find_skill(name: str) -> Optional["Skill"]:
-            """先查技能库, 找不到时重扫根目录, 自动发现磁盘上新增的 skill"""
+            """按名称查找技能, 找不到时重新扫描根目录, 自动发现磁盘上新增的 skill
+
+            Args:
+                name (str): 技能名称
+
+            Returns:
+                Optional[Skill]: 找到的技能, 没有时返回 None
+            """
             skill = library.get(name)
             if skill is None and library.root is not None:
                 # 磁盘上可能刚新增了技能, 找不到时重新扫描一次
@@ -1575,7 +1680,7 @@ class Assistant:
         """合并使用者工具和技能工具
 
         使用者工具是模型可以请求执行的函数, 技能工具只读取说明, 两者合并后一起告诉模型.
-        这里只合并, 不绑定; 真正需要工具时由 _ensure_tools_bound 绑定.
+        这里只合并工具, 不绑定模型; 真正需要时再绑定.
 
         Args:
             skill_tools (List[BaseTool]): skills 自带的只读工具
@@ -1593,8 +1698,7 @@ class Assistant:
     def _ensure_tools_bound(self) -> Optional[Runnable[Any, AIMessage]]:
         """首次真正需要工具时再绑定, 并缓存绑定结果
 
-        延迟绑定可以避免 use_tools=False 的调用因为模型不支持 bind_tools 而在
-        初始化阶段失败, 例如 create_fake_llm() 创建的假模型.
+        这样 use_tools=False 的调用不会因为模型不支持 bind_tools 而在创建助手时失败.
 
         Returns:
             Optional[Runnable[Any, AIMessage]]: 绑定工具后的模型, 没有工具时返回 None
@@ -1670,12 +1774,27 @@ class Assistant:
         # endregion ---------------------------- 逐个包装并检查重名 ----------------------------
         return wrapped_tools
 
-    def _prepare(self, prompt: str) -> None:
+    def _prepare(
+        self,
+        prompt: str,
+        images: Optional[ImagesLike] = None,
+    ) -> None:
         """把用户消息放进历史, 有知识库时先检索相关资料
 
         检索结果会放进系统提示词; 是否允许按资料里的步骤处理由 allow_execute 控制.
+        图片只作为本轮用户消息的内容块, 不参与知识库检索.
+
+        Args:
+            prompt (str): 用户输入
+            images (Optional[ImagesLike]): 一张或多张图片, 用法和 chat 相同
+
+        Raises:
+            TypeError: 图片类型不支持
+            ValueError: 图片格式或大小不合法
+            FileNotFoundError: 图片路径不存在
+            OSError: 本地图片无法读取
         """
-        self.history.append(HumanMessage(content=prompt))
+        self.history.append(_build_user_message(prompt, images))
         if self.knowledge_base is None:
             self.last_sources = []
         else:
@@ -1759,6 +1878,7 @@ class Assistant:
                     f"模型生成了无法执行的工具调用: {ai_message.invalid_tool_calls}"
                 )
             if not ai_message.tool_calls:
+                self.last_response = ai_message
                 return self._content_to_text(ai_message.content)
             self._run_tool_calls(ai_message.tool_calls)
 
@@ -1768,7 +1888,17 @@ class Assistant:
         )
 
     async def _achat_with_tools(self) -> str:
-        """异步工具调用循环, 直到模型不再请求工具"""
+        """异步工具调用循环, 直到模型不再请求工具
+
+        每次工具结果都会写回历史, 直到模型给出最终文本回复.
+
+        Returns:
+            str: 模型的最终文本回复
+
+        Raises:
+            ValueError: 模型不支持工具调用
+            RuntimeError: 工具调用超过轮数上限, 或模型生成了无法执行的工具调用
+        """
         llm_with_tools = self._ensure_tools_bound()
         if llm_with_tools is None:
             raise RuntimeError("当前助手没有绑定工具")
@@ -1783,6 +1913,7 @@ class Assistant:
                     f"模型生成了无法执行的工具调用: {ai_message.invalid_tool_calls}"
                 )
             if not ai_message.tool_calls:
+                self.last_response = ai_message
                 return self._content_to_text(ai_message.content)
             await self._arun_tool_calls(ai_message.tool_calls)
 
@@ -1796,6 +1927,9 @@ class Assistant:
 
         模型不会自己运行代码, 这里才是真正调用函数的地方.
         每次调用都会先经过 approve_tool, 结果会截断并记录到 last_tool_calls.
+
+        Args:
+            tool_calls (List[Dict[str, Any]]): 模型请求的工具调用列表
         """
         for call in tool_calls:
             name = str(call.get("name", ""))
@@ -1809,7 +1943,11 @@ class Assistant:
             )
 
     async def _arun_tool_calls(self, tool_calls: List[Dict[str, Any]]) -> None:
-        """异步执行模型请求的工具函数, 逻辑和 _run_tool_calls 一致"""
+        """异步执行模型请求的工具函数, 逻辑和 _run_tool_calls 一致
+
+        Args:
+            tool_calls (List[Dict[str, Any]]): 模型请求的工具调用列表
+        """
         for call in tool_calls:
             name = str(call.get("name", ""))
             args = call.get("args") or {}
@@ -1893,7 +2031,15 @@ class Assistant:
 
     @staticmethod
     def _new_tool_record(name: str, args: Any) -> Dict[str, Any]:
-        """创建一条工具调用记录, 结果字段稍后填充"""
+        """创建一条工具调用记录, 结果字段稍后填充
+
+        Args:
+            name (str): 工具名称
+            args (Any): 模型给出的工具参数
+
+        Returns:
+            Dict[str, Any]: 待填充的工具调用记录
+        """
         return {
             "name": name,
             "args": dict(args) if isinstance(args, dict) else args,
@@ -1945,6 +2091,8 @@ class Assistant:
     @staticmethod
     def _content_to_text(content: Any) -> str:
         """把模型返回的内容统一转成纯文本
+
+        图片, 音频等内容块会被忽略; 需要原始内容块时从 last_response.content 读取.
 
         Args:
             content (Any): 模型返回的内容, 可能是字符串, 字典或内容块列表
@@ -2184,7 +2332,14 @@ class SkillLibrary:
 
     @staticmethod
     def _first_description_line(content: str) -> str:
-        """取正文第一段非标题文字作为用途说明"""
+        """取正文第一段非标题文字作为用途说明
+
+        Args:
+            content (str): SKILL.md 的正文
+
+        Returns:
+            str: 第一段非标题文字, 没有时返回空字符串
+        """
         for line in content.splitlines():
             line = line.strip()
             if line and not line.startswith("#"):
@@ -2244,7 +2399,11 @@ class SkillLibrary:
         return sorted(self.skills)
 
     def catalog_text(self) -> str:
-        """生成给模型看的技能列表"""
+        """生成给模型看的技能列表
+
+        Returns:
+            str: 每行一个技能的名称和用途
+        """
         lines = [
             "你可以使用以下 skills. 需要完整说明时调用 load_skill, "
             "需要读取资源时调用 read_skill_file:"
@@ -2739,7 +2898,14 @@ class _AsyncToolWrapper(BaseTool):
 
 
 def _run_async(coroutine: Any) -> Any:
-    """在同步代码里执行协程, 已经在事件循环里时改用独立线程"""
+    """在同步代码里执行协程, 已经在事件循环里时改用独立线程
+
+    Args:
+        coroutine (Any): 要执行的协程对象
+
+    Returns:
+        Any: 协程的返回值
+    """
     try:
         asyncio.get_running_loop()
     except RuntimeError:
@@ -2767,13 +2933,452 @@ def _is_async_only_tool(tool: BaseTool) -> bool:
 
 
 def _wrap_async_tool(tool: BaseTool) -> BaseTool:
-    """给异步工具加一层同步包装, 名称和参数保持不变"""
+    """给异步工具加一层同步包装, 名称和参数保持不变
+
+    Args:
+        tool (BaseTool): 只有异步实现的工具
+
+    Returns:
+        BaseTool: 同步和异步都能调用的工具
+    """
     return _AsyncToolWrapper(
         name=tool.name,
         description=tool.description,
         args_schema=tool.args_schema,
         wrapped_tool=tool,
     )
+
+
+def _normalize_images(images: Optional[ImagesLike]) -> List[Dict[str, Any]]:
+    """把一张或多张图片统一成 LangChain 标准图片内容块
+
+    Args:
+        images (Optional[ImagesLike]): 单张图片或图片列表. 支持本地路径, http(s)/data URL,
+            bytes 和标准图片内容块
+
+    Returns:
+        List[Dict[str, Any]]: 标准 image 内容块列表, 没有图片时返回空列表
+
+    Raises:
+        TypeError: images 或其中某一项类型不支持
+        ValueError: 图片格式, 大小或内容块结构不合法
+        FileNotFoundError: 本地图片不存在
+        OSError: 本地图片无法读取
+    """
+    if images is None:
+        return []
+    if isinstance(images, (str, bytes, Path, dict)):
+        items: List[ImageLike] = [images]
+    elif isinstance(images, Sequence):
+        items = list(images)
+    else:
+        raise TypeError("images 必须是图片或图片列表")
+
+    blocks: List[Dict[str, Any]] = []
+    for index, item in enumerate(items, start=1):
+        try:
+            blocks.append(_image_block_from_value(item))
+        except (TypeError, ValueError, OSError) as e:
+            # 带上序号, 一次传多张图片时更容易定位是哪一张有问题
+            raise type(e)(f"第 {index} 张图片无效: {e}") from e
+    return blocks
+
+
+def _image_block_from_value(value: ImageLike) -> Dict[str, Any]:
+    """把单个图片输入转成标准 image 内容块
+
+    Args:
+        value (ImageLike): 本地路径, URL, bytes 或内容块字典
+
+    Returns:
+        Dict[str, Any]: 标准 image 内容块
+
+    Raises:
+        TypeError: 类型不支持
+        ValueError: 图片内容不合法
+        FileNotFoundError: 本地图片不存在
+        OSError: 本地图片无法读取
+    """
+    if isinstance(value, Path):
+        return _image_block_from_path(value)
+    if isinstance(value, bytes):
+        return _image_block_from_bytes(value)
+    if isinstance(value, str):
+        return _image_block_from_string(value)
+    if isinstance(value, dict):
+        return _image_block_from_dict(value)
+    raise TypeError("图片必须是路径, URL, bytes 或内容块字典")
+
+
+def _image_block_from_string(value: str) -> Dict[str, Any]:
+    """把路径, http(s) URL 或 data URL 转成标准 image 内容块
+
+    Args:
+        value (str): 图片位置
+
+    Returns:
+        Dict[str, Any]: 标准 image 内容块
+
+    Raises:
+        ValueError: URL 协议不支持或图片内容不合法
+        FileNotFoundError: 本地图片不存在
+        OSError: 本地图片无法读取
+    """
+    text = value.strip()
+    if not text:
+        raise ValueError("图片路径或 URL 不能为空")
+    if text.startswith("data:"):
+        return _image_block_from_data_url(text)
+    if text.startswith(("http://", "https://")):
+        return _image_block_from_url(text)
+    parsed = urlparse(text)
+    if "://" in text and parsed.scheme:
+        raise ValueError("图片 URL 只支持 http/https 或 data:image")
+    return _image_block_from_path(Path(text))
+
+
+def _image_block_from_url(url: str) -> Dict[str, Any]:
+    """校验 http(s) 图片地址并转成标准 image 内容块
+
+    这里只把地址交给模型提供商, 不会在本地下载图片.
+
+    Args:
+        url (str): 图片地址
+
+    Returns:
+        Dict[str, Any]: 标准 image 内容块
+
+    Raises:
+        ValueError: 地址不是有效的 http(s) URL
+    """
+    parsed = urlparse(url)
+    if parsed.scheme not in ("http", "https") or not parsed.netloc:
+        raise ValueError("图片 URL 只支持 http/https 或 data:image")
+    return {"type": "image", "url": url}
+
+
+def _image_block_from_data_url(url: str) -> Dict[str, Any]:
+    """解析 data:image/...;base64 地址, 统一转成 base64 内容块
+
+    Args:
+        url (str): data URL
+
+    Returns:
+        Dict[str, Any]: 标准 image 内容块
+
+    Raises:
+        ValueError: data URL 格式或图片内容不合法
+    """
+    header, separator, payload = url.partition(",")
+    if not separator or not header.startswith("data:"):
+        raise ValueError("图片 data URL 格式不正确")
+    meta_parts = header[5:].split(";")
+    declared_mime = meta_parts[0] or None
+    normalized_mime = _normalize_image_mime(declared_mime)
+    if "base64" not in (part.lower() for part in meta_parts[1:]):
+        raise ValueError("图片 data URL 必须使用 base64 编码")
+    base64_data, resolved_mime = _decode_image_base64(payload, normalized_mime)
+    return {
+        "type": "image",
+        "base64": base64_data,
+        "mime_type": resolved_mime,
+    }
+
+
+def _image_block_from_bytes(data: bytes) -> Dict[str, Any]:
+    """把原始图片字节转成标准 image 内容块
+
+    Args:
+        data (bytes): 图片字节
+
+    Returns:
+        Dict[str, Any]: 标准 image 内容块
+
+    Raises:
+        ValueError: 图片为空, 超过大小上限或格式不支持
+    """
+    if not data:
+        raise ValueError("图片数据不能为空")
+    if len(data) > MAX_IMAGE_BYTES:
+        raise ValueError(
+            f"图片超过 {MAX_IMAGE_BYTES // (1024 * 1024)}MB 上限"
+        )
+    mime_type = _detect_image_mime(data)
+    if mime_type is None:
+        raise ValueError("无法识别图片格式, 支持 png/jpeg/gif/webp")
+    return {
+        "type": "image",
+        "base64": base64.b64encode(data).decode("ascii"),
+        "mime_type": mime_type,
+    }
+
+
+def _image_block_from_path(path: Path) -> Dict[str, Any]:
+    """读取本地图片并转成标准 image 内容块
+
+    Args:
+        path (Path): 图片路径
+
+    Returns:
+        Dict[str, Any]: 标准 image 内容块
+
+    Raises:
+        FileNotFoundError: 图片文件不存在
+        OSError: 图片文件无法读取
+        ValueError: 图片为空, 超过大小上限或格式不支持
+    """
+    target = path.expanduser()
+    if not target.is_file():
+        raise FileNotFoundError(f"图片文件不存在: {target}")
+    size = target.stat().st_size
+    if size > MAX_IMAGE_BYTES:
+        raise ValueError(
+            f"图片 {target} 超过 {MAX_IMAGE_BYTES // (1024 * 1024)}MB 上限"
+        )
+    data = target.read_bytes()
+    if not data:
+        raise ValueError(f"图片文件为空: {target}")
+
+    mime_type = _detect_image_mime(data)
+    if mime_type is None:
+        # 魔数识别不到时再用后缀兜底, 兼容少数不标准的图片文件
+        guessed, _ = mimetypes.guess_type(target.name)
+        mime_type = _normalize_image_mime(guessed) if guessed else None
+    if mime_type is None:
+        raise ValueError(f"无法识别图片格式: {target}, 支持 png/jpeg/gif/webp")
+
+    return {
+        "type": "image",
+        "base64": base64.b64encode(data).decode("ascii"),
+        "mime_type": mime_type,
+    }
+
+
+def _image_block_from_dict(value: Dict[str, Any]) -> Dict[str, Any]:
+    """把标准或常见厂商格式的图片内容块统一成标准 image 内容块
+
+    支持:
+        {"type": "image", "url": "..."}
+        {"type": "image", "base64": "...", "mime_type": "image/png"}
+        {"type": "image", "file_id": "..."}
+        {"type": "image_url", "image_url": {"url": "..."}}
+        {"type": "image", "source": {"type": "base64", "media_type": "...", "data": "..."}}
+
+    Args:
+        value (Dict[str, Any]): 图片内容块
+
+    Returns:
+        Dict[str, Any]: 标准 image 内容块
+
+    Raises:
+        ValueError: 内容块结构或图片数据不合法
+    """
+    block_type = value.get("type", "image")
+    if block_type not in ("image", "image_url"):
+        raise ValueError(f"不支持的内容块类型: {block_type}")
+
+    if block_type == "image_url":
+        # 兼容 OpenAI 风格的 image_url 内容块
+        image_url = value.get("image_url")
+        url = image_url.get("url") if isinstance(image_url, dict) else image_url
+        if not isinstance(url, str) or not url.strip():
+            raise ValueError("image_url 内容块缺少 url")
+        return _image_block_from_string(url)
+
+    source = value.get("source")
+    if isinstance(source, dict):
+        # 兼容 Anthropic 风格的 source 内容块
+        source_type = source.get("type")
+        if source_type == "base64":
+            data = source.get("data")
+            mime_type = source.get("media_type") or source.get("mime_type")
+            if not isinstance(data, str) or not data:
+                raise ValueError("图片 source 缺少 base64 data")
+            base64_data, resolved_mime = _decode_image_base64(data, mime_type)
+            return {
+                "type": "image",
+                "base64": base64_data,
+                "mime_type": resolved_mime,
+            }
+        if source_type == "url":
+            url = source.get("url")
+            if not isinstance(url, str) or not url.strip():
+                raise ValueError("图片 source 缺少 url")
+            return _image_block_from_string(url)
+        raise ValueError(f"不支持的图片 source 类型: {source_type}")
+
+    url = value.get("url")
+    base64_data = value.get("base64")
+    file_id = value.get("file_id")
+    provided = sum(bool(item) for item in (url, base64_data, file_id))
+    if provided > 1:
+        raise ValueError("图片内容块只能提供 url, base64 或 file_id 中的一种")
+
+    if isinstance(url, str) and url.strip():
+        return _image_block_from_string(url)
+    if isinstance(base64_data, str) and base64_data:
+        if base64_data.startswith("data:"):
+            return _image_block_from_data_url(base64_data)
+        mime_type = value.get("mime_type") or value.get("media_type")
+        normalized, resolved_mime = _decode_image_base64(base64_data, mime_type)
+        return {
+            "type": "image",
+            "base64": normalized,
+            "mime_type": resolved_mime,
+        }
+    if isinstance(file_id, str) and file_id.strip():
+        return {"type": "image", "file_id": file_id}
+    raise ValueError("图片内容块需要 url, base64 或 file_id")
+
+
+def _decode_image_base64(
+    data: str,
+    mime_type: Optional[str] = None,
+) -> Tuple[str, str]:
+    """校验 base64 图片并统一编码
+
+    Args:
+        data (str): base64 数据, 可以包含换行
+        mime_type (Optional[str]): 声明的图片 MIME 类型
+
+    Returns:
+        Tuple[str, str]: 重新编码后的 base64 数据和识别出的 MIME 类型
+
+    Raises:
+        ValueError: base64 数据不合法, 超过大小上限或格式不支持
+    """
+    compact = "".join(data.split())
+    if not compact:
+        raise ValueError("图片 base64 数据不能为空")
+    try:
+        raw = base64.b64decode(compact, validate=True)
+    except (binascii.Error, ValueError) as e:
+        raise ValueError("图片 base64 数据不合法") from e
+    if not raw:
+        raise ValueError("图片 base64 数据不能为空")
+    if len(raw) > MAX_IMAGE_BYTES:
+        raise ValueError(
+            f"图片超过 {MAX_IMAGE_BYTES // (1024 * 1024)}MB 上限"
+        )
+
+    detected_mime = _detect_image_mime(raw)
+    normalized_mime = _normalize_image_mime(mime_type)
+    if detected_mime is None and normalized_mime is None:
+        raise ValueError("无法识别图片格式, 支持 png/jpeg/gif/webp")
+    if detected_mime is not None and normalized_mime is not None:
+        if detected_mime != normalized_mime:
+            raise ValueError(
+                f"图片声明的格式 {normalized_mime} 和实际格式 {detected_mime} 不一致"
+            )
+    resolved_mime = detected_mime or normalized_mime
+    if resolved_mime is None:
+        raise ValueError("无法识别图片格式, 支持 png/jpeg/gif/webp")
+    return base64.b64encode(raw).decode("ascii"), resolved_mime
+
+
+def _detect_image_mime(data: bytes) -> Optional[str]:
+    """按文件头识别常见图片格式
+
+    Args:
+        data (bytes): 图片字节
+
+    Returns:
+        Optional[str]: 识别出的 MIME 类型, 无法识别时返回 None
+    """
+    if data.startswith(b"\x89PNG\r\n\x1a\n"):
+        return "image/png"
+    if data.startswith(b"\xff\xd8\xff"):
+        return "image/jpeg"
+    if data.startswith((b"GIF87a", b"GIF89a")):
+        return "image/gif"
+    if len(data) >= 12 and data[:4] == b"RIFF" and data[8:12] == b"WEBP":
+        return "image/webp"
+    return None
+
+
+def _normalize_image_mime(mime_type: Optional[str]) -> Optional[str]:
+    """把图片 MIME 类型统一成受支持的写法
+
+    Args:
+        mime_type (Optional[str]): 原始 MIME 类型
+
+    Returns:
+        Optional[str]: 规范化后的 MIME 类型, 没有传入时返回 None
+
+    Raises:
+        TypeError: mime_type 不是字符串
+        ValueError: 图片格式不受支持
+    """
+    if mime_type is None or not str(mime_type).strip():
+        return None
+    if not isinstance(mime_type, str):
+        raise TypeError("mime_type 必须是字符串")
+    normalized = mime_type.strip().lower().split(";", 1)[0]
+    normalized = IMAGE_MIME_ALIASES.get(normalized, normalized)
+    if normalized not in SUPPORTED_IMAGE_MIME_TYPES:
+        supported = ", ".join(sorted(SUPPORTED_IMAGE_MIME_TYPES))
+        raise ValueError(f"不支持的图片格式: {mime_type}, 支持: {supported}")
+    return normalized
+
+
+def _build_user_message(
+    prompt: str,
+    images: Optional[ImagesLike] = None,
+) -> HumanMessage:
+    """构造本轮用户消息, 有图片时附带标准 image 内容块
+
+    Args:
+        prompt (str): 用户输入文本
+        images (Optional[ImagesLike]): 一张或多张图片
+
+    Returns:
+        HumanMessage: 纯文本或多模态用户消息
+
+    Raises:
+        TypeError: images 类型不支持
+        ValueError: 图片格式, 大小或内容块结构不合法
+        FileNotFoundError: 本地图片不存在
+        OSError: 本地图片无法读取
+    """
+    image_blocks = _normalize_images(images)
+    if not image_blocks:
+        return HumanMessage(content=prompt)
+    return HumanMessage(
+        content=[
+            {"type": "text", "text": prompt},
+            *image_blocks,
+        ]
+    )
+
+
+def _strip_media_blocks(messages: List[BaseMessage]) -> List[BaseMessage]:
+    """复制历史消息并去掉图片, 音频, 视频和文件内容块
+
+    Args:
+        messages (List[BaseMessage]): 原始历史消息
+
+    Returns:
+        List[BaseMessage]: 只保留文字的消息列表
+    """
+    stripped: List[BaseMessage] = []
+    for message in messages:
+        content = message.content
+        if not isinstance(content, list):
+            stripped.append(message)
+            continue
+        blocks = [
+            block
+            for block in content
+            if not (
+                isinstance(block, dict)
+                and block.get("type") in MEDIA_BLOCK_TYPES
+            )
+        ]
+        if not blocks:
+            # 整条消息只有媒体时补一个占位文本, 避免出现空消息
+            blocks = [{"type": "text", "text": "[媒体内容已省略]"}]
+        stripped.append(message.model_copy(update={"content": blocks}))
+    return stripped
 
 
 def create_mcp_tools(
@@ -2839,7 +3444,17 @@ def create_mcp_tools(
 
 
 def _normalize_name(provider: str) -> str:
-    """把提供商名称统一成配置表里的键"""
+    """把提供商名称统一成配置表里的键
+
+    Args:
+        provider (str): 提供商名称或别名
+
+    Returns:
+        str: 配置表里的提供商名称
+
+    Raises:
+        ValueError: provider 为空或不是字符串
+    """
     if not isinstance(provider, str) or not provider.strip():
         raise ValueError("provider 不能为空")
     name = provider.strip().lower()
@@ -2849,8 +3464,14 @@ def _normalize_name(provider: str) -> str:
 def _normalize_provider(provider: str) -> str:
     """把提供商名称统一成聊天模型配置表里的键
 
+    Args:
+        provider (str): 提供商名称或别名
+
+    Returns:
+        str: 聊天模型配置表里的提供商名称
+
     Raises:
-        ValueError: 提供商不在预置列表中
+        ValueError: 提供商为空, 类型不对, 或不在预置列表中
     """
     name = _normalize_name(provider)
     if name not in PROVIDERS:
@@ -2894,6 +3515,14 @@ def _load_component_class(
     component: str,
 ) -> Type[Any]:
     """导入提供商对应的 LangChain 类
+
+    Args:
+        config (Dict[str, Any]): 提供商配置, 包含模块名和类名
+        provider (str): 提供商名称, 用于报错提示
+        component (str): 组件名称, 例如聊天模型或向量模型
+
+    Returns:
+        Type[Any]: 对应的 LangChain 类
 
     Raises:
         ImportError: 集成包未安装, 或版本不兼容
@@ -2994,6 +3623,11 @@ def create_embeddings_llm(
     Raises:
         ValueError: 提供商不支持或没有向量接口, 或缺少必需的 API 密钥
         ImportError: 对应的 LangChain 集成包未安装
+
+    Example:
+        >>> embeddings = create_embeddings_llm("ollama")
+        >>> isinstance(embeddings, Embeddings)
+        True
     """
     provider_name = _normalize_name(provider)
     if provider_name not in EMBEDDING_PROVIDERS:
@@ -3091,6 +3725,11 @@ def create_knowledge_base(
         ValueError: 提供商不支持, 缺少 API 密钥, 或分块参数不合法
         ImportError: 对应的 LangChain 集成包未安装
         FileNotFoundError: 传入的路径不存在
+
+    Example:
+        >>> knowledge_base = create_knowledge_base("ollama", chunk_size=500)
+        >>> isinstance(knowledge_base, KnowledgeBase)
+        True
     """
     if path is not None:
         # 先检查路径, 路径写错时不用初始化向量模型
