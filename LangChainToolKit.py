@@ -8,6 +8,9 @@
     >>> Assistant("qwen", tools=[get_weather]).chat("北京天气")
     >>> Assistant("qwen", docs="./docs", embed_provider="qwen").chat("总结这些文档")
     >>> Assistant("qwen", model="qwen-vl-max").chat("图中有什么?", images=["./a.png"])
+    >>> Assistant("deepseek", max_total_tokens=100_000).chat("你好")
+
+需要控制成本时, 可以设置 max_total_tokens 或 max_cost, 用 last_usage, total_usage 或 usage_text() 查看用量.
 
 tools 是模型可以调用的函数, 需要 docstring 和类型注解; skills 是只读的说明和资源,
 打开 allow_execute 后才允许模型遵循其中的指令并运行 skill 目录里的脚本;
@@ -43,6 +46,7 @@ import hashlib
 import mimetypes
 import subprocess
 import importlib
+import warnings
 from pathlib import Path
 from urllib.parse import urlparse
 from concurrent.futures import ThreadPoolExecutor
@@ -64,6 +68,8 @@ from typing import (
 from langchain_core.tools import BaseTool
 from langchain_core.runnables import Runnable
 from langchain_core.documents import Document
+from langchain_core.callbacks import BaseCallbackHandler
+from langchain_core.outputs import LLMResult
 from langchain_core.messages import AIMessage
 from langchain_core.messages import BaseMessage
 from langchain_core.messages import ToolMessage
@@ -81,6 +87,7 @@ from langchain_core.language_models.fake_chat_models import FakeListChatModel
 
 __all__ = [
     "Assistant",
+    "BudgetExceededError",
     "KnowledgeBase",
     "Skill",
     "SkillLibrary",
@@ -359,6 +366,13 @@ DEFAULT_FAKE_RESPONSES: List[str] = [
 ]
 
 
+class BudgetExceededError(RuntimeError):
+    """token 或费用预算已用完, 助手拒绝发起新的模型请求
+
+    已经完成的请求仍会计入 total_usage; 调大预算或调用 reset_usage() 后可以继续.
+    """
+
+
 class Assistant:
     """一个可以直接对话的助手
 
@@ -371,8 +385,8 @@ class Assistant:
     tools 是函数, skills 默认是只读说明, 两者不要混在一起.
     allow_execute=False 时, skills/docs 只作参考, 脚本不会执行.
 
-    需要时还能审批工具, 截断工具输出, 保存和裁剪历史, 做结构化输出,
-    使用异步接口和事件流, 或通过 mcp_servers 接入 MCP 工具.
+    需要时还能审批工具, 截断工具输出, 保存和裁剪历史, 统计 token 用量和估算费用,
+    设置预算, 做结构化输出, 使用异步接口和事件流, 或通过 mcp_servers 接入 MCP 工具.
     对话入口支持 images 参数, 可以把图片作为多模态输入传给模型.
 
     Attributes:
@@ -381,6 +395,8 @@ class Assistant:
         last_tool_calls (List[Dict[str, Any]]): 最近一次对话的工具调用记录
         last_response (Optional[AIMessage]): 最近一次对话的原始模型回复,
             模型返回图片等非文本内容时从 content 里读取
+        last_usage (Dict[str, Any]): 最近一轮的模型调用次数, token 用量和估算费用
+        total_usage (Dict[str, Any]): 创建以来的累计用量, 估算费用和剩余预算
 
     Example:
         >>> assistant = Assistant("deepseek")
@@ -412,6 +428,12 @@ class Assistant:
         mcp_servers: Optional[Dict[str, Dict[str, Any]]] = None,
         docs_persist_directory: Optional[Union[str, Path]] = None,
         llm: Optional[BaseChatModel] = None,
+        *,
+        max_total_tokens: Optional[int] = None,
+        max_cost: Optional[float] = None,
+        input_price_per_1m: Optional[float] = None,
+        output_price_per_1m: Optional[float] = None,
+        currency: str = "USD",
         **kwargs: Any,
     ) -> None:
         """创建助手
@@ -439,6 +461,17 @@ class Assistant:
                 适合传入 create_fake_llm() 的假模型, 或自己配置的模型实例.
                 传 llm 时不能再传 api_key, model, base_url 或模型参数; 使用 docs 路径时
                 需要显式指定 embed_provider, 或直接传现成的 KnowledgeBase
+            max_total_tokens (Optional[int]): 累计 token 预算, 达到上限后下一次
+                模型请求会抛出 BudgetExceededError, 正在进行的请求允许完成.
+                提供商没有返回 token 用量时, 预算只能统计调用次数.
+                Defaults to None, 表示不限制
+            max_cost (Optional[float]): 累计费用预算, 需要同时提供两个价格.
+                Defaults to None, 表示不限制
+            input_price_per_1m (Optional[float]): 输入 token 每百万的参考价,
+                只用于估算费用, 不内置价格表. Defaults to None
+            output_price_per_1m (Optional[float]): 输出 token 每百万的参考价,
+                只用于估算费用, 不内置价格表. Defaults to None
+            currency (str): 费用单位, 只用于显示, 不做汇率换算. Defaults to "USD"
             allow_execute (bool): 是否允许执行 skills/docs 里的指令和脚本. Defaults to False.
                 关闭时内容只作参考, 脚本不会运行; 打开后允许模型按说明操作, skill 目录里的
                 .py 脚本可以通过 run_skill_script 工具运行. 打开等于信任这些目录里的内容,
@@ -461,9 +494,9 @@ class Assistant:
             **kwargs (Any): 其他参数, 原样传给聊天模型
 
         Raises:
-            ValueError: 提供商不支持, 缺少密钥, 数值参数不合法, 工具或 skill 定义有误,
-                provider 和 llm 同时传入或都没有传, 或 docs_persist_directory 没有和
-                docs 一起使用
+            ValueError: 提供商不支持, 缺少密钥, 数值, 预算或价格参数不合法,
+                工具或 skill 定义有误, provider 和 llm 同时传入或都没有传, 或
+                docs_persist_directory 没有和 docs 一起使用
             TypeError: llm, allow_execute, approve_tool, summarize_history, mcp_servers
                 或 docs_persist_directory 类型不对
             ImportError: 对应的 LangChain 集成包未安装
@@ -500,6 +533,39 @@ class Assistant:
             raise TypeError("docs_persist_directory 必须是字符串或 Path")
         if docs is None and docs_persist_directory is not None:
             raise ValueError("docs_persist_directory 需要和 docs 一起使用")
+        if max_total_tokens is not None and (
+            not isinstance(max_total_tokens, int)
+            or isinstance(max_total_tokens, bool)
+            or max_total_tokens < 1
+        ):
+            raise ValueError("max_total_tokens 必须是大于 0 的整数或 None")
+        if max_cost is not None and (
+            not isinstance(max_cost, (int, float))
+            or isinstance(max_cost, bool)
+            or max_cost <= 0
+        ):
+            raise ValueError("max_cost 必须是大于 0 的数字或 None")
+        if (input_price_per_1m is None) != (output_price_per_1m is None):
+            raise ValueError(
+                "input_price_per_1m 和 output_price_per_1m 需要同时提供"
+            )
+        for price_name, price_value in (
+            ("input_price_per_1m", input_price_per_1m),
+            ("output_price_per_1m", output_price_per_1m),
+        ):
+            if price_value is not None and (
+                not isinstance(price_value, (int, float))
+                or isinstance(price_value, bool)
+                or price_value < 0
+            ):
+                raise ValueError(f"{price_name} 必须是非负数字或 None")
+        if max_cost is not None and input_price_per_1m is None:
+            raise ValueError(
+                "设置 max_cost 时需要同时提供 input_price_per_1m "
+                "和 output_price_per_1m"
+            )
+        if not isinstance(currency, str) or not currency.strip():
+            raise ValueError("currency 必须是非空字符串")
         # endregion ---------------------------- 参数校验 ----------------------------
 
         # region ---------------------------- 创建聊天模型 ----------------------------
@@ -537,6 +603,16 @@ class Assistant:
         self.last_tool_calls: List[Dict[str, Any]] = [] # 最近一次对话的工具调用记录
         self.last_response: Optional[AIMessage] = None # 最近一次对话的原始模型回复
         self._history_summary = "" # 被裁掉的历史摘要, 会作为系统消息带上
+        self._usage_tracker = _UsageTracker( # token 用量统计和预算检查
+            max_total_tokens=max_total_tokens,
+            max_cost=max_cost,
+            input_price_per_1m=input_price_per_1m,
+            output_price_per_1m=output_price_per_1m,
+            currency=currency,
+        )
+        self._callback_config: Dict[str, Any] = { # 所有模型调用共用的回调配置
+            "callbacks": [self._usage_tracker],
+        }
         # endregion ---------------------------- 保存助手配置 ----------------------------
 
         # region ---------------------------- 初始化工具 ----------------------------
@@ -619,6 +695,7 @@ class Assistant:
             FileNotFoundError: 图片路径不存在
             OSError: 本地图片无法读取
             RuntimeError: 工具调用超过 max_tool_rounds, 或模型生成了无法执行的工具调用
+            BudgetExceededError: 已达到 max_total_tokens 或 max_cost 预算
         """
         if not isinstance(prompt, str) or not prompt.strip():
             raise ValueError("prompt 不能为空")
@@ -629,6 +706,8 @@ class Assistant:
 
         self.last_tool_calls = []
         self.last_response = None
+        self._usage_tracker.start_turn()
+        self._usage_tracker.check_budget()
         if schema is not None:
             return self._invoke_structured(
                 prompt,
@@ -649,7 +728,10 @@ class Assistant:
             if use_tools and self._tools:
                 result = self._chat_with_tools()
             else:
-                ai_message = self.llm.invoke(self._build_messages())
+                ai_message = self.llm.invoke(
+                    self._build_messages(),
+                    config=self._callback_config,
+                )
                 self.history.append(ai_message)
                 self.last_response = ai_message
                 result = self._content_to_text(ai_message.content)
@@ -686,6 +768,7 @@ class Assistant:
             FileNotFoundError: 图片路径不存在
             OSError: 本地图片无法读取
             RuntimeError: 工具调用超过轮数上限, 或模型生成了无法执行的工具调用
+            BudgetExceededError: 已达到 max_total_tokens 或 max_cost 预算
         """
         answer = self.chat(prompt, images=images)
         return answer, list(self.last_sources)
@@ -748,6 +831,7 @@ class Assistant:
             FileNotFoundError: 图片路径不存在
             OSError: 本地图片无法读取
             RuntimeError: 工具调用超过轮数上限, 或模型生成了无法执行的工具调用
+            BudgetExceededError: 已达到 max_total_tokens 或 max_cost 预算
         """
         if not isinstance(prompt, str) or not prompt.strip():
             raise ValueError("prompt 不能为空")
@@ -758,13 +842,18 @@ class Assistant:
 
         self.last_tool_calls = []
         self.last_response = None
+        self._usage_tracker.start_turn()
+        self._usage_tracker.check_budget()
         self._trim_history()
         start = len(self.history) # 本轮消息的起点, 出错时只回滚到这里
         is_success = False # 只有完整结束才保留本轮历史
         parts: List[str] = []
         try:
             self._prepare(prompt, images)
-            for chunk in self.llm.stream(self._build_messages()):
+            for chunk in self.llm.stream(
+                self._build_messages(),
+                config=self._callback_config,
+            ):
                 text = self._content_to_text(chunk.content)
                 if text:
                     parts.append(text)
@@ -814,6 +903,7 @@ class Assistant:
             FileNotFoundError: 图片路径不存在
             OSError: 本地图片无法读取
             RuntimeError: 工具调用超过 max_tool_rounds, 或模型生成了无法执行的工具调用
+            BudgetExceededError: 已达到 max_total_tokens 或 max_cost 预算
         """
         if not isinstance(prompt, str) or not prompt.strip():
             raise ValueError("prompt 不能为空")
@@ -824,6 +914,8 @@ class Assistant:
 
         self.last_tool_calls = []
         self.last_response = None
+        self._usage_tracker.start_turn()
+        self._usage_tracker.check_budget()
         if schema is not None:
             return await self._ainvoke_structured(
                 prompt,
@@ -844,7 +936,10 @@ class Assistant:
             if use_tools and self._tools:
                 result = await self._achat_with_tools()
             else:
-                ai_message = await self.llm.ainvoke(self._build_messages())
+                ai_message = await self.llm.ainvoke(
+                    self._build_messages(),
+                    config=self._callback_config,
+                )
                 self.history.append(ai_message)
                 self.last_response = ai_message
                 result = self._content_to_text(ai_message.content)
@@ -884,6 +979,7 @@ class Assistant:
             FileNotFoundError: 图片路径不存在
             OSError: 本地图片无法读取
             RuntimeError: 工具调用超过轮数上限, 或模型生成了无法执行的工具调用
+            BudgetExceededError: 已达到 max_total_tokens 或 max_cost 预算
         """
         if not isinstance(prompt, str) or not prompt.strip():
             raise ValueError("prompt 不能为空")
@@ -894,13 +990,18 @@ class Assistant:
 
         self.last_tool_calls = []
         self.last_response = None
+        self._usage_tracker.start_turn()
+        self._usage_tracker.check_budget()
         self._trim_history()
         start = len(self.history) # 本轮消息的起点, 出错时只回滚到这里
         is_success = False # 只有完整结束才保留本轮历史
         parts: List[str] = []
         try:
             self._prepare(prompt, images)
-            async for chunk in self.llm.astream(self._build_messages()):
+            async for chunk in self.llm.astream(
+                self._build_messages(),
+                config=self._callback_config,
+            ):
                 text = self._content_to_text(chunk.content)
                 if text:
                     parts.append(text)
@@ -944,12 +1045,15 @@ class Assistant:
             FileNotFoundError: 图片路径不存在
             OSError: 本地图片无法读取
             RuntimeError: 工具调用超过轮数上限, 或模型生成了无法执行的工具调用
+            BudgetExceededError: 已达到 max_total_tokens 或 max_cost 预算
         """
         if not isinstance(prompt, str) or not prompt.strip():
             raise ValueError("prompt 不能为空")
 
         self.last_tool_calls = []
         self.last_response = None
+        self._usage_tracker.start_turn()
+        self._usage_tracker.check_budget()
         self._trim_history()
         start = len(self.history) # 本轮消息的起点, 出错时只回滚到这里
         is_success = False # 只有完整结束才保留本轮历史
@@ -960,7 +1064,10 @@ class Assistant:
 
             # region ---------------------------- 没有工具时直接流式输出 ----------------------------
             if not self._tools:
-                for chunk in self.llm.stream(self._build_messages()):
+                for chunk in self.llm.stream(
+                    self._build_messages(),
+                    config=self._callback_config,
+                ):
                     text = self._content_to_text(chunk.content)
                     if text:
                         parts.append(text)
@@ -976,7 +1083,11 @@ class Assistant:
                 if llm_with_tools is None:
                     raise RuntimeError("当前助手没有绑定工具")
                 for _ in range(self.max_tool_rounds):
-                    ai_message = llm_with_tools.invoke(self._build_messages())
+                    self._usage_tracker.check_budget()
+                    ai_message = llm_with_tools.invoke(
+                        self._build_messages(),
+                        config=self._callback_config,
+                    )
                     self.history.append(ai_message)
                     if getattr(ai_message, "invalid_tool_calls", None):
                         raise RuntimeError(
@@ -1044,6 +1155,8 @@ class Assistant:
     def reset(self) -> None:
         """清空对话历史, 检索结果和工具调用记录, 保留提示词, skills, 工具和知识库
 
+        本轮用量会清零, 累计用量和预算占用不受影响; 需要重置预算时调用 reset_usage().
+
         Example:
             >>> assistant.reset()
             >>> assistant.history
@@ -1054,6 +1167,61 @@ class Assistant:
         self.last_tool_calls.clear()
         self.last_response = None
         self._history_summary = ""
+        self._usage_tracker.start_turn()
+
+    @property
+    def last_usage(self) -> Dict[str, Any]:
+        """最近一轮对话的模型调用次数, token 用量和估算费用
+
+        Returns:
+            Dict[str, Any]: 包含 calls, usage_reported_calls, input_tokens,
+                output_tokens, total_tokens, cost 和 currency 的副本
+        """
+        return self._usage_tracker.last_snapshot()
+
+    @property
+    def total_usage(self) -> Dict[str, Any]:
+        """创建以来累计的用量, 费用和剩余预算
+
+        Returns:
+            Dict[str, Any]: 在 last_usage 字段基础上增加 max_total_tokens,
+                max_cost, remaining_tokens 和 remaining_cost
+        """
+        return self._usage_tracker.total_snapshot()
+
+    def usage_text(self) -> str:
+        """把本轮和累计用量格式化成一行文本, 方便直接打印
+
+        Returns:
+            str: 形如 "本轮: 1 次调用, 150 tokens; 累计: ..." 的文本
+        """
+        def describe(usage: Dict[str, Any]) -> str:
+            """描述一份用量, 缺少费用或用量时自动省略对应部分"""
+            text = f"{usage['calls']} 次调用, {usage['total_tokens']} tokens"
+            missing = usage["calls"] - usage["usage_reported_calls"]
+            if missing > 0:
+                text += f" ({missing} 次未返回用量)"
+            if usage["cost"] is not None:
+                text += f", 估算 {usage['cost']:.6f} {usage['currency']}"
+            return text
+
+        total = self.total_usage
+        parts = [f"本轮: {describe(self.last_usage)}"]
+        parts.append(f"累计: {describe(total)}")
+        if total["remaining_tokens"] is not None:
+            parts.append(f"剩余 token: {total['remaining_tokens']}")
+        if total["remaining_cost"] is not None:
+            parts.append(
+                f"剩余费用: {total['remaining_cost']:.6f} {total['currency']}"
+            )
+        return "; ".join(parts)
+
+    def reset_usage(self) -> None:
+        """清零本轮和累计用量, 让预算重新可用
+
+        只影响统计, 不清空对话历史. 适用于按天或按任务重开预算.
+        """
+        self._usage_tracker.reset()
 
     def save_history(
         self,
@@ -1214,8 +1382,13 @@ class Assistant:
         system = "你负责压缩对话历史, 只输出摘要正文, 不要添加解释."
 
         try:
+            self._usage_tracker.check_budget()
             response = self.llm.invoke(
-                [SystemMessage(content=system), HumanMessage(content="\n\n".join(prompt_parts))]
+                [
+                    SystemMessage(content=system),
+                    HumanMessage(content="\n\n".join(prompt_parts)),
+                ],
+                config=self._callback_config,
             )
         except Exception:
             # 摘要失败不影响主流程, 继续使用旧摘要
@@ -1252,7 +1425,10 @@ class Assistant:
         structured_llm = self._create_structured_llm(schema, **kwargs)
         if save_history:
             self._trim_history()
-        result = structured_llm.invoke(self._build_structured_messages(user_message))
+        result = structured_llm.invoke(
+            self._build_structured_messages(user_message),
+            config=self._callback_config,
+        )
         if save_history:
             self.history.append(user_message)
             self.history.append(AIMessage(content=self._structured_to_text(result)))
@@ -1289,7 +1465,8 @@ class Assistant:
         if save_history:
             self._trim_history()
         result = await structured_llm.ainvoke(
-            self._build_structured_messages(user_message)
+            self._build_structured_messages(user_message),
+            config=self._callback_config,
         )
         if save_history:
             self.history.append(user_message)
@@ -1863,13 +2040,18 @@ class Assistant:
         Raises:
             ValueError: 模型不支持工具调用
             RuntimeError: 工具调用超过轮数上限, 或模型生成了无法执行的工具调用
+            BudgetExceededError: 已达到 max_total_tokens 或 max_cost 预算
         """
         llm_with_tools = self._ensure_tools_bound()
         if llm_with_tools is None:
             raise RuntimeError("当前助手没有绑定工具")
 
         for _ in range(self.max_tool_rounds):
-            ai_message = llm_with_tools.invoke(self._build_messages())
+            self._usage_tracker.check_budget()
+            ai_message = llm_with_tools.invoke(
+                self._build_messages(),
+                config=self._callback_config,
+            )
             self.history.append(ai_message) # 先保存模型回复, 工具结果才能按 id 对应上
 
             if getattr(ai_message, "invalid_tool_calls", None):
@@ -1898,13 +2080,18 @@ class Assistant:
         Raises:
             ValueError: 模型不支持工具调用
             RuntimeError: 工具调用超过轮数上限, 或模型生成了无法执行的工具调用
+            BudgetExceededError: 已达到 max_total_tokens 或 max_cost 预算
         """
         llm_with_tools = self._ensure_tools_bound()
         if llm_with_tools is None:
             raise RuntimeError("当前助手没有绑定工具")
 
         for _ in range(self.max_tool_rounds):
-            ai_message = await llm_with_tools.ainvoke(self._build_messages())
+            self._usage_tracker.check_budget()
+            ai_message = await llm_with_tools.ainvoke(
+                self._build_messages(),
+                config=self._callback_config,
+            )
             self.history.append(ai_message) # 先保存模型回复, 工具结果才能按 id 对应上
 
             if getattr(ai_message, "invalid_tool_calls", None):
@@ -2859,6 +3046,241 @@ class KnowledgeBase:
         if k < 1:
             raise ValueError("k 必须大于 0")
         return self.store.as_retriever(search_kwargs={"k": k})
+
+
+def _to_int(value: Any) -> int:
+    """把 token 数量转成非负整数
+
+    Args:
+        value (Any): 提供商返回的 token 数量
+
+    Returns:
+        int: 非负整数, 无效时返回 0
+    """
+    try:
+        number = int(value)
+    except (TypeError, ValueError):
+        return 0
+    return max(number, 0)
+
+
+class _UsageTracker(BaseCallbackHandler):
+    """统计模型调用的 token 用量和估算费用, 并按预算拦截请求
+
+    用量优先从 AIMessage.usage_metadata 读取, 兼容 llm_output 里的 token_usage.
+    提供商没有返回用量时只统计调用次数, 不影响对话.
+    """
+
+    def __init__(
+        self,
+        max_total_tokens: Optional[int] = None,
+        max_cost: Optional[float] = None,
+        input_price_per_1m: Optional[float] = None,
+        output_price_per_1m: Optional[float] = None,
+        currency: str = "USD",
+    ) -> None:
+        """保存预算和价格, 计数器从 0 开始
+
+        Args:
+            max_total_tokens (Optional[int]): 累计 token 上限
+            max_cost (Optional[float]): 累计费用上限
+            input_price_per_1m (Optional[float]): 输入 token 每百万的参考价
+            output_price_per_1m (Optional[float]): 输出 token 每百万的参考价
+            currency (str): 费用单位, 只用于显示
+        """
+        self.max_total_tokens = max_total_tokens # 累计 token 上限
+        self.max_cost = max_cost # 累计费用上限
+        self.input_price_per_1m = input_price_per_1m # 输入 token 参考价
+        self.output_price_per_1m = output_price_per_1m # 输出 token 参考价
+        self.currency = currency.strip() # 费用单位
+        self._last = self._empty() # 最近一轮的计数
+        self._total = self._empty() # 创建以来的累计计数
+        self._warned_missing_usage = False # 没拿到用量时是否已经提醒过
+
+    @staticmethod
+    def _empty() -> Dict[str, int]:
+        """创建一份从 0 开始的计数"""
+        return {
+            "calls": 0,
+            "usage_reported_calls": 0,
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "total_tokens": 0,
+        }
+
+    def start_turn(self) -> None:
+        """重置本轮计数, 累计用量和预算占用保持不变"""
+        self._last = self._empty()
+
+    def reset(self) -> None:
+        """清零本轮和累计计数, 让预算重新可用"""
+        self._last = self._empty()
+        self._total = self._empty()
+        self._warned_missing_usage = False
+
+    def on_llm_end(self, response: LLMResult, **kwargs: Any) -> None:
+        """每次模型调用结束后累加用量
+
+        Args:
+            response (LLMResult): LangChain 回调给出的模型返回
+            **kwargs (Any): 回调附加参数, 这里不使用
+        """
+        input_tokens, output_tokens, total_tokens = self._extract_usage(response)
+        has_usage = bool(input_tokens or output_tokens or total_tokens)
+        for bucket in (self._last, self._total):
+            bucket["calls"] += 1
+            if has_usage:
+                bucket["usage_reported_calls"] += 1
+            bucket["input_tokens"] += input_tokens
+            bucket["output_tokens"] += output_tokens
+            bucket["total_tokens"] += total_tokens
+        if not has_usage and self._budget_enabled():
+            self._warn_missing_usage()
+
+    @staticmethod
+    def _extract_usage(response: LLMResult) -> Tuple[int, int, int]:
+        """从模型返回里读取 token 用量
+
+        Args:
+            response (LLMResult): LangChain 回调给出的模型返回
+
+        Returns:
+            Tuple[int, int, int]: 输入, 输出和总 token 数, 读不到时返回 0
+        """
+        # 优先使用 LangChain 标准的 usage_metadata
+        for generation_list in response.generations:
+            for generation in generation_list:
+                message = getattr(generation, "message", None)
+                usage = getattr(message, "usage_metadata", None)
+                if not usage:
+                    continue
+                input_tokens = _to_int(usage.get("input_tokens"))
+                output_tokens = _to_int(usage.get("output_tokens"))
+                total_tokens = _to_int(usage.get("total_tokens"))
+                if input_tokens or output_tokens or total_tokens:
+                    return (
+                        input_tokens,
+                        output_tokens,
+                        total_tokens or input_tokens + output_tokens,
+                    )
+
+        # 兼容把用量放在 llm_output 里的集成包, 字段名有 OpenAI 和通用两种写法
+        llm_output = response.llm_output or {}
+        for key in ("token_usage", "usage"):
+            usage = llm_output.get(key)
+            if not isinstance(usage, dict):
+                continue
+            input_tokens = _to_int(
+                usage.get("input_tokens") or usage.get("prompt_tokens")
+            )
+            output_tokens = _to_int(
+                usage.get("output_tokens") or usage.get("completion_tokens")
+            )
+            total_tokens = _to_int(usage.get("total_tokens"))
+            if input_tokens or output_tokens or total_tokens:
+                return (
+                    input_tokens,
+                    output_tokens,
+                    total_tokens or input_tokens + output_tokens,
+                )
+        return 0, 0, 0
+
+    def _budget_enabled(self) -> bool:
+        """是否配置了 token 或费用预算"""
+        return self.max_total_tokens is not None or self.max_cost is not None
+
+    def check_budget(self) -> None:
+        """累计用量达到预算时抛出异常
+
+        Raises:
+            BudgetExceededError: token 或费用预算已用完
+        """
+        if (
+            self.max_total_tokens is not None
+            and self._total["total_tokens"] >= self.max_total_tokens
+        ):
+            raise BudgetExceededError(
+                f"token 预算已用完: 已用 {self._total['total_tokens']} / "
+                f"{self.max_total_tokens}, 可以调大 max_total_tokens "
+                "或调用 reset_usage() 重新开始"
+            )
+        cost = self._estimate_cost(self._total)
+        if self.max_cost is not None and cost is not None and cost >= self.max_cost:
+            raise BudgetExceededError(
+                f"费用预算已用完: 已用 {cost:.6f} / {self.max_cost:g} "
+                f"{self.currency}, 可以调大 max_cost 或调用 reset_usage() 重新开始"
+            )
+
+    def _warn_missing_usage(self) -> None:
+        """配置了预算但没有拿到用量时, 只提醒一次"""
+        if self._warned_missing_usage:
+            return
+        self._warned_missing_usage = True
+        warnings.warn(
+            "当前模型没有返回 token 用量, 预算只能统计调用次数, 无法按 token 或费用拦截",
+            RuntimeWarning,
+            stacklevel=2,
+        )
+
+    def _estimate_cost(self, usage: Dict[str, int]) -> Optional[float]:
+        """按每百万 token 的参考价估算费用
+
+        Args:
+            usage (Dict[str, int]): 包含 input_tokens 和 output_tokens 的计数
+
+        Returns:
+            Optional[float]: 估算费用, 没有配置价格时返回 None
+        """
+        if self.input_price_per_1m is None or self.output_price_per_1m is None:
+            return None
+        return (
+            usage["input_tokens"] / 1_000_000 * self.input_price_per_1m
+            + usage["output_tokens"] / 1_000_000 * self.output_price_per_1m
+        )
+
+    def last_snapshot(self) -> Dict[str, Any]:
+        """返回最近一轮用量的副本"""
+        return self._snapshot(self._last)
+
+    def total_snapshot(self) -> Dict[str, Any]:
+        """返回累计用量, 估算费用和剩余预算的副本"""
+        snapshot = self._snapshot(self._total)
+        if self.max_total_tokens is None:
+            remaining_tokens = None
+        else:
+            remaining_tokens = max(
+                self.max_total_tokens - self._total["total_tokens"],
+                0,
+            )
+        if self.max_cost is None:
+            remaining_cost = None
+        else:
+            # max_cost 生效时一定配置了价格, 这里不会拿到 None
+            cost = self._estimate_cost(self._total) or 0.0
+            remaining_cost = round(max(self.max_cost - cost, 0.0), 6)
+        snapshot.update(
+            max_total_tokens=self.max_total_tokens,
+            max_cost=self.max_cost,
+            remaining_tokens=remaining_tokens,
+            remaining_cost=remaining_cost,
+        )
+        return snapshot
+
+    def _snapshot(self, usage: Dict[str, int]) -> Dict[str, Any]:
+        """把一份计数转成带费用信息的副本
+
+        Args:
+            usage (Dict[str, int]): 原始计数
+
+        Returns:
+            Dict[str, Any]: 可以直接展示的用量字典
+        """
+        cost = self._estimate_cost(usage)
+        return {
+            **usage,
+            "cost": round(cost, 6) if cost is not None else None,
+            "currency": self.currency,
+        }
 
 
 class _AsyncToolWrapper(BaseTool):
